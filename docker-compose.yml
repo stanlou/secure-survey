@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # Express App
+  app:
+    restart: unless-stopped
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL:  ${DATABASE_URL}
+    depends_on:
+      - db
+    volumes:
+      - ./server/src:/app/src
+      - ./server/prisma:/app/prisma
+      - ./server/package.json:/app/package.json
+
+  migrate-dev:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      args:
+        NPM_LOG_LEVEL: notice
+    command:
+      - /bin/sh
+      - -c
+      - npx prisma migrate dev --name migrationdata 
+    working_dir: /app
+    tty: true
+    stdin_open: true
+    volumes:
+      - ./docker/supabase/volumes/db/migration:/app/prisma/migrations
+      - ./server/prisma:/app/prisma
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      - db
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgres
+    volumes:
+      - ./server/src:/app/src
+      - ./server/package.json:/app/package.json
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+  pgadmin:
+    image: dpage/pgadmin4:2024-07-24-1
+    depends_on:
+      - db
+    ports:
+      - "53603:53603"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: password
+      PGADMIN_LISTEN_PORT: 53603
+    restart: unless-stopped
+
+
+volumes:
+  postgres-data:
