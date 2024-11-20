@@ -9,14 +9,21 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "add": "^2.0.6",
     "axios": "^1.7.7",
+    "bootstrap": "^5.3.3",
+    "bootstrap-vue": "^2.23.1",
+    "element-plus": "^2.8.8",
     "install": "^0.13.0",
+    "path": "^0.12.7",
     "pinia": "^2.2.6",
     "survey-core": "^1.12.10",
     "survey-creator-core": "^1.12.10",
     "survey-creator-vue": "^1.12.10",
     "survey-vue3-ui": "^1.12.10",
-    "vue": "^3.5.12"
+    "vue": "^3.5.12",
+    "vue-router": "^4.4.5",
+    "yarn": "^1.22.22"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.1.4",

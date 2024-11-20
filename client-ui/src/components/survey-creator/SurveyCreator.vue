@@ -2,7 +2,9 @@
 <template>
   <div>
     <SurveyCreatorComponent :model="creator" />
-    <div style="width:100%;background-color: blue;color: white;" @click="handleSaveSurvey">CREATE</div>
+    <div @click="handleSaveSurvey">
+      <el-button class="w-100" type="success" size="large">CREATE</el-button> 
+    </div>
   </div>
 </template>
 <script setup lang="ts">
@@ -13,6 +15,9 @@ import { copyObject, SurveyCreatorModel } from "survey-creator-core";
 import { SurveyCreatorComponent } from "survey-creator-vue";
 import {onMounted} from 'vue'
 import axios from 'axios'
+import { settings } from "survey-creator-core";
+
+settings.designer.defaultAddQuestionType = "radiogroup";
 
 
 

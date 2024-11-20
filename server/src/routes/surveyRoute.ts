@@ -28,7 +28,7 @@ router.post("/saveSurvey", async (req: Request, res: Response) : Promise<any> =>
   }
 });
 
-router.post("/findMany", async (req: Request, res: Response) : Promise<any> => {
+router.get("/findMany", async (req: Request, res: Response) : Promise<any> => {
   try {
     const surveyList = await prisma.survey.findMany(); 
     res.status(200).json({ surveyList });
@@ -38,7 +38,7 @@ router.post("/findMany", async (req: Request, res: Response) : Promise<any> => {
   }
 });
 
-router.post("/findOne/:id", async (req: Request, res: Response) : Promise<any> => {
+router.get("/findOne/:id", async (req: Request, res: Response) : Promise<any> => {
   try {
     const survey = await prisma.survey.findUnique({
       where:{

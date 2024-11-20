@@ -2,22 +2,22 @@ version: '3.8'
 
 services:
   # Express App
-  app:
-    restart: unless-stopped
-    build:
-      context: ./server
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    environment:
-      DATABASE_URL:  ${DATABASE_URL}
-    depends_on:
-      - db
-    volumes:
-      - ./server/src:/app/src
-      - ./server/prisma:/app/prisma
-      - ./server/package.json:/app/package.json
-      - /app/node_modules
+  # app:
+  #   restart: unless-stopped
+  #   build:
+  #     context: ./server
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     DATABASE_URL:  ${DATABASE_URL}
+  #   depends_on:
+  #     - db
+  #   volumes:
+  #     - ./server/src:/app/src
+  #     - ./server/prisma:/app/prisma
+  #     - ./server/package.json:/app/package.json
+  #     - /app/node_modules
 
 
   migrate-dev:
