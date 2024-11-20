@@ -7,7 +7,7 @@ import SurveyForm from "./components/survey-form/SurveyForm.vue"
 <template>
 <div>
 
-  <SurveyForm />
+  <SurveyCreator />
 
 </div>
 </template>

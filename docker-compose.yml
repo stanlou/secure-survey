@@ -17,6 +17,8 @@ services:
       - ./server/src:/app/src
       - ./server/prisma:/app/prisma
       - ./server/package.json:/app/package.json
+      - /app/node_modules
+
 
   migrate-dev:
     build:

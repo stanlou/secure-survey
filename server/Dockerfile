@@ -3,6 +3,7 @@ FROM node:20-alpine
 
 # Update npm to version 7
 RUN npm i -g npm
+RUN npm install -g nodemon ts-node
 
 WORKDIR /app
 
