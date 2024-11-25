@@ -15,11 +15,7 @@ const id = route.params.id
 const surveyJson = ref();
 const surveyModel = ref();
 
-const surveyComplete = (survey: any) => {
 
-  console.log(survey.data)
-}
-// survey.onComplete.add(surveyComplete);
 onMounted(async () => {
   const {data} =  await axios.get(API_URL+'/survey/findOne/'+id)
   surveyJson.value = data.survey.data.data
