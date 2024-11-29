@@ -1,3 +1,3 @@
-import { Add } from './Add.js';
+import { SurveyContract } from './Survey';
 
-export { Add };
+export { SurveyContract };
