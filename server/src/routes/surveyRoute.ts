@@ -42,10 +42,16 @@ router.get("/findOne/:id", async (req: Request, res: Response) : Promise<any> =>
   try {
     const survey = await prisma.survey.findUnique({
       where:{
-        id: req.params.id,
+        id: BigInt(req.params.id),
       }
     }); 
-    res.status(200).json({ survey });
+    if (survey) {
+       const surveyWithSerializedBigInt = {
+        ...survey,
+        id: survey.id.toString(),  
+      };
+    res.status(200).json({ survey:surveyWithSerializedBigInt });
+    }
   } catch (error) {
     console.error("Error saving survey:", error);
     res.status(500).json({ message: "Failed to find survey" });

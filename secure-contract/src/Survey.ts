@@ -1,4 +1,5 @@
-import { Field, MerkleMap, MerkleMapWitness, method, Poseidon, PublicKey, Signature, SmartContract, State, state } from "o1js";
+import { Field, MerkleMap, MerkleMapWitness, method, Poseidon, provable, Provable, PublicKey, Signature, SmartContract, State, state } from "o1js";
+import { fieldsToJson } from "./helpers/fieldsToJson";
 
 export class SurveyContract extends SmartContract {
 
@@ -6,30 +7,31 @@ export class SurveyContract extends SmartContract {
     @state(Field) surveyCount = State<Field>();
     @state(Field) answerMapRoot = State<Field>();
     @state(Field) answerCount = State<Field>();
-    @state(Field) nullifierMerkleRoot = State<Field>();
+    @state(Field) nullifierMapRoot = State<Field>();
 
 
     @method async initState() {
         super.init();
         const surveyMerkleMap = new MerkleMap()
         const answerMerkleMap = new MerkleMap()
+        const nullifierMerkleMap = new MerkleMap()
         this.surveyMapRoot.set(surveyMerkleMap.getRoot());
         this.surveyCount.set(Field(0)) 
         this.answerMapRoot.set(answerMerkleMap.getRoot());
         this.answerCount.set(Field(0)) 
-
+        this.nullifierMapRoot.set(nullifierMerkleMap.getRoot())
       }
     
     @method async saveSurvey(keyToChange: Field , surveyHash: Field, witness: MerkleMapWitness) {
         const initialRoot = this.surveyMapRoot.getAndRequireEquals()
         const currentSurveyCount = this.surveyCount.getAndRequireEquals()
+        surveyHash.assertNotEquals(Field(0));
         const [ rootBefore, key ] = witness.computeRootAndKeyV2(Field(0));
         rootBefore.assertEquals(initialRoot);
         key.assertEquals(keyToChange);
         const [ rootAfter, _ ] = witness.computeRootAndKeyV2(surveyHash);
         this.surveyMapRoot.set(rootAfter)
         this.surveyCount.set(currentSurveyCount.add(Field(1)))
-    
     }
 
     @method async saveAnswer(keyToChange: Field , answerHash: Field, answerWitness: MerkleMapWitness,
@@ -37,18 +39,22 @@ export class SurveyContract extends SmartContract {
         ,nullifierWitness: MerkleMapWitness, signature:Signature) {
         const answerInitialRoot = this.answerMapRoot.getAndRequireEquals()
         const currentAnswerCount = this.answerCount.getAndRequireEquals()
-        const surveyInitialRoot = this.answerMapRoot.getAndRequireEquals()
-        const nullifierInitialRoot = this.nullifierMerkleRoot.getAndRequireEquals()
+        const surveyInitialRoot = this.surveyMapRoot.getAndRequireEquals()
+        const nullifierInitialRoot = this.nullifierMapRoot.getAndRequireEquals()
         const [ rootBefore, key ] = answerWitness.computeRootAndKeyV2(Field(0));
         rootBefore.assertEquals(answerInitialRoot);
         key.assertEquals(keyToChange);
+
+        // answer validation 
+        answerHash.assertNotEquals(Field(0))
 
         // check for signature
         const signatureMessage = Poseidon.hash(answererPublicKey.toFields().concat(answerHash,surveyKey))
         signature.verify(answererPublicKey,signatureMessage.toFields())
 
         // check for survey existance 
-        // todo check if there are surveys before emitting answers
+        // check if there are surveys before emitting answers
+        surveyHash.assertNotEquals(Field(0))
         const [currentSurveyRoot , currentSurveyKey] = surveyWitness.computeRootAndKeyV2(surveyHash)
         currentSurveyRoot.assertEquals(surveyInitialRoot);
         currentSurveyKey.assertEquals(surveyKey);
@@ -64,7 +70,7 @@ export class SurveyContract extends SmartContract {
         const [ rootAfter, _ ] = answerWitness.computeRootAndKeyV2(answerHash);
         const [nullifierRootAfter , _key ] = nullifierWitness.computeRootAndKeyV2(Field(1))
         this.answerMapRoot.set(rootAfter)
-        this.nullifierMerkleRoot.set(nullifierRootAfter)
+        this.nullifierMapRoot.set(nullifierRootAfter)
         this.answerCount.set(currentAnswerCount.add(Field(1)))
     }
     
