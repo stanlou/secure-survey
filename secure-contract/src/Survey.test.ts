@@ -126,13 +126,6 @@ describe('Survey', () => {
     [createAnswerStruct(2n,plainAnswerData,2n)]
 
   ]
-/*   const hashedAnswerData = Poseidon.hash(jsonToFields(plainAnswerData))
-  const hashedSurveyData = Poseidon.hash(jsonToFields(plainSurveyData))
-  const surveyId = Field(1) 
-  const survey2Id = Field(2) 
-  const answerId = Field(1)
-  const answer2Id = Field(2)
- */ 
   const fakeSurveyId  = Field(100n)
   beforeAll(async() => {
     if(proofsEnabled){

@@ -57,6 +57,9 @@ export class SurveyContract extends SmartContract {
     survey:Survey,
     witness: MerkleMapWitness
   ) {
+    const isInitialized = this.isInitialized.getAndRequireEquals()
+    isInitialized.assertTrue()
+
     const initialRoot = this.surveyMapRoot.getAndRequireEquals();
     const currentSurveyCount = this.surveyCount.getAndRequireEquals();
     survey.data.assertNotEquals(Field(0));
@@ -77,6 +80,8 @@ export class SurveyContract extends SmartContract {
     nullifierWitness: MerkleMapWitness,
     signature: Signature
   ) {
+    const isInitialized = this.isInitialized.getAndRequireEquals()
+    isInitialized.assertTrue()
     const answerInitialRoot = this.answerMapRoot.getAndRequireEquals();
     const currentAnswerCount = this.answerCount.getAndRequireEquals();
     const surveyInitialRoot = this.surveyMapRoot.getAndRequireEquals();
@@ -92,7 +97,7 @@ export class SurveyContract extends SmartContract {
     const signatureMessage = Poseidon.hash(
       answererPublicKey.toFields().concat(answer.data, survey.dbId)
     );
-    signature.verify(answererPublicKey, signatureMessage.toFields());
+    signature.verify(answererPublicKey, signatureMessage.toFields()).assertTrue();
 
     // check for survey existance
     // check if there are surveys before emitting answers
