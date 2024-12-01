@@ -1,5 +1,5 @@
-import { AccountUpdate, Field, MerkleMap, Mina, Poseidon, PrivateKey, PublicKey, Signature } from "o1js";
-import { SurveyContract } from "./Survey";
+import { AccountUpdate, Bool, Field, MerkleMap, Mina, Poseidon, PrivateKey, PublicKey, Signature } from "o1js";
+import { Answer, Survey, SurveyContract } from "./Survey";
 import { jsonToFields } from "./helpers/jsonToFields";
 
 let proofsEnabled = false
@@ -98,13 +98,42 @@ describe('Survey', () => {
       "Item 3"
     ]
   })
-  const hashedAnswerData = Poseidon.hash(jsonToFields(plainAnswerData))
+  const createSurveyStruct = (dbId : bigint,surveyData: string) => {
+    const hashedSurveyId = Poseidon.hash([Field(dbId)])
+    const hashedSurveyData= Poseidon.hash(jsonToFields(surveyData))
+    return new Survey({
+      dbId:hashedSurveyId,
+      data:hashedSurveyData
+    })
+  }
+  const createAnswerStruct = (dbId : bigint,answerData: string,surveyId:bigint) => {
+    const hashedAnswerId = Poseidon.hash([Field(dbId)])
+    const hashedSurveyId = Poseidon.hash([Field(surveyId)])
+    const hashedAnswerData= Poseidon.hash(jsonToFields(answerData))
+    return new Answer({
+      dbId:hashedAnswerId,
+      data:hashedAnswerData,
+      surveyDbId:hashedSurveyId
+    })
+  }
+  const testSurveys = [
+    createSurveyStruct(1n,plainSurveyData),
+    createSurveyStruct(2n,plainSurveyData)
+
+  ]
+  const testAnswers = [
+    [createAnswerStruct(1n,plainAnswerData,1n),createAnswerStruct(3n,plainAnswerData,1n)],
+    [createAnswerStruct(2n,plainAnswerData,2n)]
+
+  ]
+/*   const hashedAnswerData = Poseidon.hash(jsonToFields(plainAnswerData))
   const hashedSurveyData = Poseidon.hash(jsonToFields(plainSurveyData))
   const surveyId = Field(1) 
   const survey2Id = Field(2) 
   const answerId = Field(1)
   const answer2Id = Field(2)
-  const inexistantSurveyId  = Field(5)
+ */ 
+  const fakeSurveyId  = Field(100n)
   beforeAll(async() => {
     if(proofsEnabled){
       await SurveyContract.compile()
@@ -144,28 +173,31 @@ describe('Survey', () => {
     const zkNullifierRoot = zkApp.nullifierMapRoot.get()
     const surveyCount = zkApp.surveyCount.get()
     const answerCount = zkApp.answerCount.get()
+    const isInitialized = zkApp.isInitialized.get()
     expect(zkSurveyRoot).toEqual(surveyMerkleMap.getRoot())
     expect(zkAnswerRoot).toEqual(answerMerkleMap.getRoot())
     expect(zkNullifierRoot).toEqual(nullifierMerkleMap.getRoot())
-
     expect(surveyCount).toEqual(Field(0))
     expect(answerCount).toEqual(Field(0))
+    expect(isInitialized).toEqual(Bool(true))
+
   })
-  const createSurvey = async (newSurveyId:Field,newSurveyData:Field) => {
-    const witness = surveyMerkleMap.getWitness(newSurveyId)
+
+  const createSurvey = async (survey:Survey) => {
+    const witness = surveyMerkleMap.getWitness(survey.dbId)
     const createSurveyTx = await Mina.transaction(senderPublicKey, async()=> {
-      await zkApp.saveSurvey(newSurveyId,newSurveyData,witness)
+      await zkApp.saveSurvey(survey,witness)
     })
     await createSurveyTx.prove()
     createSurveyTx.sign([senderPrivateKey]);
     const pendingSaveTx = await createSurveyTx.send();
     await pendingSaveTx.wait();
-    surveyMerkleMap.set(newSurveyId,newSurveyData)  
+    surveyMerkleMap.set(survey.dbId,survey.hash())  
 
   }
   it("create a new survey",async() => {
    await deploy()
-   await createSurvey(surveyId,hashedSurveyData)
+   await createSurvey(testSurveys[0])
    expect(surveyMerkleMap.getRoot().toString()).toEqual(zkApp.surveyMapRoot.get().toString())
    expect(zkApp.surveyCount.get()).toEqual(Field(1))
   })
@@ -173,8 +205,8 @@ describe('Survey', () => {
     let valid = true
     try {
       await deploy()
-      await createSurvey(surveyId,hashedSurveyData)
-      await createSurvey(surveyId,hashedSurveyData)
+      await createSurvey(testSurveys[0])
+      await createSurvey(testSurveys[0])
       
     } catch(err) {
       valid = false
@@ -183,48 +215,55 @@ describe('Survey', () => {
   })
   it("create 2 surveys",async() => {
     await deploy()
-    await createSurvey(surveyId,hashedSurveyData)
-    await createSurvey(survey2Id,hashedSurveyData)
+    await createSurvey(testSurveys[0])
+    await createSurvey(testSurveys[1])
     expect(surveyMerkleMap.getRoot().toString()).toEqual(zkApp.surveyMapRoot.get().toString())
     expect(zkApp.surveyCount.get()).toEqual(Field(2))   
   })
-  it("create empty survey at key field(0)",async() => {
+  it("create empty survey at key 0",async() => {
     let valid = true
+    const emptySurvey = new Survey({
+      dbId:Field(0),
+      data:Field(0)
+    })
     try {
       await deploy()
-      await createSurvey(Field(0),Field(0))
+      await createSurvey(emptySurvey)
     }catch {
       valid = false
     }
     expect(valid).toBeFalsy()
   })
-  const createAnswer = async (newAnswerId:Field , answeredSurveyKey:Field, newAnswerData:Field,answererPublicKey:PublicKey, answererPrivateKey:PrivateKey) => {
-    const answerWitness = answerMerkleMap.getWitness(newAnswerId)
-    const surveyWitness = surveyMerkleMap.getWitness(answeredSurveyKey)
-    const answeredSurveyData = surveyMerkleMap.get(answeredSurveyKey)
-    const nullifierKey = Poseidon.hash(answererPublicKey.toFields().concat([answeredSurveyKey]))
+  const createAnswer = async (answer: Answer , answererPublicKey:PublicKey, answererPrivateKey:PrivateKey) => {
+    const answerWitness = answerMerkleMap.getWitness(answer.dbId)
+    const surveyWitness = surveyMerkleMap.getWitness(answer.surveyDbId)
+    const answeredSurveyData = surveyMerkleMap.get(answer.surveyDbId)
+    const nullifierKey = Poseidon.hash(answererPublicKey.toFields().concat([answer.surveyDbId]))
 
     const nullifierWitness = nullifierMerkleMap.getWitness(nullifierKey)
     const signature = Signature.create(
       answererPrivateKey,
-      Poseidon.hash(answererPublicKey.toFields().concat([answeredSurveyKey])).toFields()
+      Poseidon.hash(answererPublicKey.toFields().concat([answer.surveyDbId])).toFields()
     );
-    
+    const survey = new Survey({
+      dbId: answer.surveyDbId,
+      data: answeredSurveyData
+    })
     const createAnswerTx = await Mina.transaction(answererPublicKey, async()=> {
-      await zkApp.saveAnswer(newAnswerId,newAnswerData,answerWitness,surveyWitness,answeredSurveyKey,answeredSurveyData,answererPublicKey,nullifierWitness,signature)
+      await zkApp.saveAnswer(answer,survey,answerWitness,surveyWitness,answererPublicKey,nullifierWitness,signature)
     })
     await createAnswerTx.prove()
     createAnswerTx.sign([answererPrivateKey]);
     const pendingSaveTx = await createAnswerTx.send();
     await pendingSaveTx.wait();
-    answerMerkleMap.set(newAnswerId,newAnswerData)
+    answerMerkleMap.set(answer.dbId,answer.hash())
     nullifierMerkleMap.set(nullifierKey,Field(1))
-
   }
   it("create a new answer",async() => {
     await deploy()
-    await createSurvey(surveyId,hashedSurveyData)
-    await createAnswer(answerId,surveyId,hashedAnswerData,senderPublicKey,senderPrivateKey)
+    await createSurvey(testSurveys[0])
+
+    await createAnswer(testAnswers[0][0],senderPublicKey,senderPrivateKey)
 
     expect(answerMerkleMap.getRoot().toString()).toEqual(zkApp.answerMapRoot.get().toString())
     expect(nullifierMerkleMap.getRoot().toString()).toEqual(zkApp.nullifierMapRoot.get().toString())
@@ -234,10 +273,10 @@ describe('Survey', () => {
     let valid = true
     try {
       await deploy()
-      await createSurvey(surveyId,hashedSurveyData)
+      await createSurvey(testSurveys[0])
 
-      await createAnswer(answerId,surveyId,hashedAnswerData,senderPublicKey,senderPrivateKey)
-      await createAnswer(answer2Id,surveyId,hashedAnswerData,senderPublicKey,senderPrivateKey)
+      await createAnswer(testAnswers[0][0],senderPublicKey,senderPrivateKey)
+      await createAnswer(testAnswers[0][1],senderPublicKey,senderPrivateKey)
   
     }catch {
       valid = false
@@ -246,21 +285,21 @@ describe('Survey', () => {
   })
   it("create 2 answers on same survey by different users",async() => {
     await deploy()
-    await createSurvey(surveyId,hashedSurveyData)
+    await createSurvey(testSurveys[0])
 
-    await createAnswer(answerId,surveyId,hashedAnswerData,senderPublicKey,senderPrivateKey)
-    await createAnswer(answer2Id,surveyId,hashedAnswerData,sender2PublicKey,sender2PrivateKey)
+    await createAnswer(testAnswers[0][0],senderPublicKey,senderPrivateKey)
+    await createAnswer(testAnswers[0][1],sender2PublicKey,sender2PrivateKey)
     expect(answerMerkleMap.getRoot().toString()).toEqual(zkApp.answerMapRoot.get().toString())
     expect(nullifierMerkleMap.getRoot().toString()).toEqual(zkApp.nullifierMapRoot.get().toString())
     expect(zkApp.answerCount.get()).toEqual(Field(2))
   })
   it("create 2 answers on different survey by same user",async() => {
     await deploy()
-    await createSurvey(surveyId,hashedSurveyData)
-    await createSurvey(survey2Id,hashedSurveyData)
+    await createSurvey(testSurveys[0])
+    await createSurvey(testSurveys[1])
 
-    await createAnswer(answerId,surveyId,hashedAnswerData,senderPublicKey,senderPrivateKey)
-    await createAnswer(answer2Id,survey2Id,hashedAnswerData,senderPublicKey,senderPrivateKey)
+    await createAnswer(testAnswers[0][0],senderPublicKey,senderPrivateKey)
+    await createAnswer(testAnswers[1][0],senderPublicKey,senderPrivateKey)
     expect(answerMerkleMap.getRoot().toString()).toEqual(zkApp.answerMapRoot.get().toString())
     expect(nullifierMerkleMap.getRoot().toString()).toEqual(zkApp.nullifierMapRoot.get().toString())
     expect(zkApp.answerCount.get()).toEqual(Field(2))
@@ -269,9 +308,13 @@ describe('Survey', () => {
     let valid = true
     try {
       await deploy()
-      await createSurvey(surveyId,hashedSurveyData)
-
-      await createAnswer(answerId,surveyId,Field(0),senderPublicKey,senderPrivateKey)
+      await createSurvey(testSurveys[0])
+      const emptyAnswer = new Answer({
+        dbId:Poseidon.hash([Field(1n)]),
+        data:Field(0),
+        surveyDbId: Field(1n)
+      })
+      await createAnswer(emptyAnswer,senderPublicKey,senderPrivateKey)
     } catch {
       valid = false
     }
@@ -281,9 +324,9 @@ describe('Survey', () => {
     let valid = true
     try {
       await deploy()
-      await createSurvey(surveyId,hashedSurveyData)
-
-      await createAnswer(answerId,Field(0),Field(0),senderPublicKey,senderPrivateKey)
+      await createSurvey(testSurveys[0])
+      const answerEmptySurvey = createAnswerStruct(0n,plainAnswerData,0n)
+      await createAnswer(answerEmptySurvey,senderPublicKey,senderPrivateKey)
     } catch {
       valid = false
     }
@@ -293,10 +336,10 @@ describe('Survey', () => {
     let valid = true
     try {
       await deploy()
-      await createSurvey(surveyId,hashedSurveyData)
+      await createSurvey(testSurveys[0])
 
-      await createAnswer(answerId,surveyId,hashedAnswerData,senderPublicKey,senderPrivateKey)
-      await createAnswer(answerId,surveyId,hashedAnswerData,senderPublicKey,senderPrivateKey)
+      await createAnswer(testAnswers[0][0],senderPublicKey,senderPrivateKey)
+      await createAnswer(testAnswers[0][0],senderPublicKey,senderPrivateKey)
 
     } catch(err) {
       valid = false
@@ -307,9 +350,8 @@ describe('Survey', () => {
     let valid = true
     try {
       await deploy()
-      await createSurvey(surveyId,hashedSurveyData)
-
-      await createAnswer(answerId,inexistantSurveyId,hashedAnswerData,senderPublicKey,senderPrivateKey)
+      const answer = createAnswerStruct(0n,plainAnswerData,5n)
+      await createAnswer(answer,senderPublicKey,senderPrivateKey)
       
     } catch(err) {
       valid = false

@@ -1,77 +1,121 @@
-import { Field, MerkleMap, MerkleMapWitness, method, Poseidon, provable, Provable, PublicKey, Signature, SmartContract, State, state } from "o1js";
-import { fieldsToJson } from "./helpers/fieldsToJson";
+import {
+    Bool,
+  Field,
+  MerkleMap,
+  MerkleMapWitness,
+  method,
+  Poseidon,
+  PublicKey,
+  Signature,
+  SmartContract,
+  State,
+  state,
+  Struct,
+} from 'o1js';
 
+export class Survey extends Struct({
+  dbId: Field,
+  data: Field,
+}) {
+  hash(): Field {
+    return Poseidon.hash(Survey.toFields(this));
+  }
+}
+export class Answer extends Struct({
+    dbId: Field,
+    surveyDbId: Field,
+    data: Field,
+  }) {
+    hash(): Field {
+      return Poseidon.hash(Answer.toFields(this));
+    }
+  }
+  
 export class SurveyContract extends SmartContract {
-
-    @state(Field) surveyMapRoot = State<Field>();
-    @state(Field) surveyCount = State<Field>();
-    @state(Field) answerMapRoot = State<Field>();
-    @state(Field) answerCount = State<Field>();
-    @state(Field) nullifierMapRoot = State<Field>();
-
-
-    @method async initState() {
-        super.init();
-        const surveyMerkleMap = new MerkleMap()
-        const answerMerkleMap = new MerkleMap()
-        const nullifierMerkleMap = new MerkleMap()
-        this.surveyMapRoot.set(surveyMerkleMap.getRoot());
-        this.surveyCount.set(Field(0)) 
-        this.answerMapRoot.set(answerMerkleMap.getRoot());
-        this.answerCount.set(Field(0)) 
-        this.nullifierMapRoot.set(nullifierMerkleMap.getRoot())
-      }
-    
-    @method async saveSurvey(keyToChange: Field , surveyHash: Field, witness: MerkleMapWitness) {
-        const initialRoot = this.surveyMapRoot.getAndRequireEquals()
-        const currentSurveyCount = this.surveyCount.getAndRequireEquals()
-        surveyHash.assertNotEquals(Field(0));
-        const [ rootBefore, key ] = witness.computeRootAndKeyV2(Field(0));
-        rootBefore.assertEquals(initialRoot);
-        key.assertEquals(keyToChange);
-        const [ rootAfter, _ ] = witness.computeRootAndKeyV2(surveyHash);
-        this.surveyMapRoot.set(rootAfter)
-        this.surveyCount.set(currentSurveyCount.add(Field(1)))
-    }
-
-    @method async saveAnswer(keyToChange: Field , answerHash: Field, answerWitness: MerkleMapWitness,
-        surveyWitness: MerkleMapWitness,surveyKey:Field,surveyHash:Field,answererPublicKey:PublicKey
-        ,nullifierWitness: MerkleMapWitness, signature:Signature) {
-        const answerInitialRoot = this.answerMapRoot.getAndRequireEquals()
-        const currentAnswerCount = this.answerCount.getAndRequireEquals()
-        const surveyInitialRoot = this.surveyMapRoot.getAndRequireEquals()
-        const nullifierInitialRoot = this.nullifierMapRoot.getAndRequireEquals()
-        const [ rootBefore, key ] = answerWitness.computeRootAndKeyV2(Field(0));
-        rootBefore.assertEquals(answerInitialRoot);
-        key.assertEquals(keyToChange);
-
-        // answer validation 
-        answerHash.assertNotEquals(Field(0))
-
-        // check for signature
-        const signatureMessage = Poseidon.hash(answererPublicKey.toFields().concat(answerHash,surveyKey))
-        signature.verify(answererPublicKey,signatureMessage.toFields())
-
-        // check for survey existance 
-        // check if there are surveys before emitting answers
-        surveyHash.assertNotEquals(Field(0))
-        const [currentSurveyRoot , currentSurveyKey] = surveyWitness.computeRootAndKeyV2(surveyHash)
-        currentSurveyRoot.assertEquals(surveyInitialRoot);
-        currentSurveyKey.assertEquals(surveyKey);
+  @state(Field) surveyMapRoot = State<Field>();
+  @state(Field) surveyCount = State<Field>();
+  @state(Field) answerMapRoot = State<Field>();
+  @state(Field) answerCount = State<Field>();
+  @state(Field) nullifierMapRoot = State<Field>();
+  @state(Bool) isInitialized = State<Bool>(Bool(false));
 
 
-        // check for nullifier
-        const nullifierKey = Poseidon.hash(answererPublicKey.toFields().concat([surveyKey]))
-        const [currentNullifierRoot , currentNullifierKey] = nullifierWitness.computeRootAndKeyV2(Field(0))
-        currentNullifierRoot.assertEquals(nullifierInitialRoot);
-        currentNullifierKey.assertEquals(nullifierKey);
+  @method async initState() {
+    super.init();
+    const surveyMerkleMap = new MerkleMap();
+    const answerMerkleMap = new MerkleMap();
+    const nullifierMerkleMap = new MerkleMap();
+    this.surveyMapRoot.set(surveyMerkleMap.getRoot());
+    this.surveyCount.set(Field(0));
+    this.answerMapRoot.set(answerMerkleMap.getRoot());
+    this.answerCount.set(Field(0));
+    this.nullifierMapRoot.set(nullifierMerkleMap.getRoot());
+    this.isInitialized.set(Bool(true))
+  }
 
+  @method async saveSurvey(
+    survey:Survey,
+    witness: MerkleMapWitness
+  ) {
+    const initialRoot = this.surveyMapRoot.getAndRequireEquals();
+    const currentSurveyCount = this.surveyCount.getAndRequireEquals();
+    survey.data.assertNotEquals(Field(0));
+    const [rootBefore, key] = witness.computeRootAndKeyV2(Field(0));
+    rootBefore.assertEquals(initialRoot);
+    key.assertEquals(survey.dbId);
+    const [rootAfter, _] = witness.computeRootAndKeyV2(survey.hash());
+    this.surveyMapRoot.set(rootAfter);
+    this.surveyCount.set(currentSurveyCount.add(Field(1)));
+  }
 
-        const [ rootAfter, _ ] = answerWitness.computeRootAndKeyV2(answerHash);
-        const [nullifierRootAfter , _key ] = nullifierWitness.computeRootAndKeyV2(Field(1))
-        this.answerMapRoot.set(rootAfter)
-        this.nullifierMapRoot.set(nullifierRootAfter)
-        this.answerCount.set(currentAnswerCount.add(Field(1)))
-    }
-    
+  @method async saveAnswer(
+    answer: Answer,
+    survey: Survey,
+    answerWitness: MerkleMapWitness,
+    surveyWitness: MerkleMapWitness,
+    answererPublicKey: PublicKey,
+    nullifierWitness: MerkleMapWitness,
+    signature: Signature
+  ) {
+    const answerInitialRoot = this.answerMapRoot.getAndRequireEquals();
+    const currentAnswerCount = this.answerCount.getAndRequireEquals();
+    const surveyInitialRoot = this.surveyMapRoot.getAndRequireEquals();
+    const nullifierInitialRoot = this.nullifierMapRoot.getAndRequireEquals();
+    const [rootBefore, key] = answerWitness.computeRootAndKeyV2(Field(0));
+    rootBefore.assertEquals(answerInitialRoot);
+    key.assertEquals(answer.dbId);
+
+    // answer validation
+    answer.data.assertNotEquals(Field(0));
+
+    // check for signature
+    const signatureMessage = Poseidon.hash(
+      answererPublicKey.toFields().concat(answer.data, survey.dbId)
+    );
+    signature.verify(answererPublicKey, signatureMessage.toFields());
+
+    // check for survey existance
+    // check if there are surveys before emitting answers
+    survey.data.assertNotEquals(Field(0));
+    const [currentSurveyRoot, currentSurveyKey] =
+      surveyWitness.computeRootAndKeyV2(survey.data);
+    currentSurveyRoot.assertEquals(surveyInitialRoot);
+    currentSurveyKey.assertEquals(survey.dbId);
+
+    // check for nullifier
+    const nullifierKey = Poseidon.hash(
+      answererPublicKey.toFields().concat([survey.dbId])
+    );
+    const [currentNullifierRoot, currentNullifierKey] =
+      nullifierWitness.computeRootAndKeyV2(Field(0));
+    currentNullifierRoot.assertEquals(nullifierInitialRoot);
+    currentNullifierKey.assertEquals(nullifierKey);
+    const [rootAfter, _] = answerWitness.computeRootAndKeyV2(answer.hash());
+    const [nullifierRootAfter, _key] = nullifierWitness.computeRootAndKeyV2(
+      Field(1)
+    );
+    this.answerMapRoot.set(rootAfter);
+    this.nullifierMapRoot.set(nullifierRootAfter);
+    this.answerCount.set(currentAnswerCount.add(Field(1)));
+  }
 }
