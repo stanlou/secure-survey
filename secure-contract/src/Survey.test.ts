@@ -81,6 +81,8 @@ describe('Survey', () => {
   });
   const hashedSurveyData = Poseidon.hash(jsonToFields(plainSurveyData))
   const surveyId = Field(1) 
+  const survey2Id = Field(2) 
+  const answerId = Field(1)
   beforeAll(async() => {
     if(proofsEnabled){
       await SurveyContract.compile()
@@ -122,21 +124,68 @@ describe('Survey', () => {
     expect(surveyCount).toEqual(Field(0))
     expect(answerCount).toEqual(Field(0))
   })
-  const createSurvey = async () => {
-    const witness = surveyMerkleMap.getWitness(surveyId)
+  const createSurvey = async (newSurveyId:Field,newSurveyData:Field) => {
+    const witness = surveyMerkleMap.getWitness(newSurveyId)
     const createSurveyTx = await Mina.transaction(senderPublicKey, async()=> {
-      await zkApp.saveSurvey(surveyId,hashedSurveyData,witness)
+      await zkApp.saveSurvey(newSurveyId,newSurveyData,witness)
     })
     await createSurveyTx.prove()
     createSurveyTx.sign([senderPrivateKey]);
     const pendingSaveTx = await createSurveyTx.send();
     await pendingSaveTx.wait();
+    surveyMerkleMap.set(newSurveyId,newSurveyData)  
+
   }
   it("create a new survey",async() => {
    await deploy()
-   await createSurvey()
-   surveyMerkleMap.set(surveyId,hashedSurveyData)
+   await createSurvey(surveyId,hashedSurveyData)
    expect(surveyMerkleMap.getRoot().toString()).toEqual(zkApp.surveyMapRoot.get().toString())
    expect(zkApp.surveyCount.get()).toEqual(Field(1))
   })
+  it("overwrite a created survey",async() => {
+    let valid = true
+    try {
+      await deploy()
+      await createSurvey(surveyId,hashedSurveyData)
+      await createSurvey(surveyId,hashedSurveyData)
+      
+    } catch(err) {
+      valid = false
+    }
+    expect(valid).toBeFalsy()
+   })
+  it("create 2 surveys",async() => {
+    await deploy()
+    await createSurvey(surveyId,hashedSurveyData)
+    await createSurvey(survey2Id,hashedSurveyData)
+    expect(surveyMerkleMap.getRoot().toString()).toEqual(zkApp.surveyMapRoot.get().toString())
+    expect(zkApp.surveyCount.get()).toEqual(Field(2))   
+  })
+  const createAnswer = async () => {
+    const witness = answerMerkleMap.getWitness(answerId)
+    const createAnswerTx = await Mina.transaction(senderPublicKey, async()=> {
+      await zkApp.saveAnswer(answerId,hashedSurveyData,witness)
+    })
+    await createAnswerTx.prove()
+    createAnswerTx.sign([senderPrivateKey]);
+    const pendingSaveTx = await createAnswerTx.send();
+    await pendingSaveTx.wait();
+  }
+  // create answer , update nullifier , verify signature 
+  // test create 1 answer 
+  //test create 2 answers 
+  // test override answer
+  // test double answer 
+  // test vote to existant survey
+  // test vote to inexistant survey
+  
+  it("create a new answer",async() => {
+    await deploy()
+    await createAnswer()
+    // todo: generate answer hash
+    answerMerkleMap.set(answerId,hashedSurveyData)
+    expect(answerMerkleMap.getRoot().toString()).toEqual(zkApp.answerMapRoot.get().toString())
+    expect(zkApp.answerCount.get()).toEqual(Field(1))
+  })
+
 });
