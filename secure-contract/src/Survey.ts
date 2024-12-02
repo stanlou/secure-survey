@@ -1,5 +1,5 @@
 import {
-    Bool,
+  Bool,
   Field,
   MerkleMap,
   MerkleMapWitness,
@@ -23,15 +23,15 @@ export class Survey extends Struct({
   }
 }
 export class Answer extends Struct({
-    dbId: Field,
-    surveyDbId: Field,
-    data: Field,
-  }) {
-    hash(): Field {
-      return Poseidon.hash(Answer.toFields(this));
-    }
+  dbId: Field,
+  surveyDbId: Field,
+  data: Field,
+}) {
+  hash(): Field {
+    return Poseidon.hash(Answer.toFields(this));
   }
-  
+}
+
 export class SurveyContract extends SmartContract {
   @state(Field) surveyMapRoot = State<Field>();
   @state(Field) surveyCount = State<Field>();
@@ -50,12 +50,9 @@ export class SurveyContract extends SmartContract {
     this.isInitialized.set(Bool(true));
   }
 
-  @method async saveSurvey(
-    survey:Survey,
-    witness: MerkleMapWitness
-  ) {
-    const isInitialized = this.isInitialized.getAndRequireEquals()
-    isInitialized.assertTrue()
+  @method async saveSurvey(survey: Survey, witness: MerkleMapWitness) {
+    const isInitialized = this.isInitialized.getAndRequireEquals();
+    isInitialized.assertTrue();
 
     const initialRoot = this.surveyMapRoot.getAndRequireEquals();
     const currentSurveyCount = this.surveyCount.getAndRequireEquals();
@@ -77,8 +74,8 @@ export class SurveyContract extends SmartContract {
     nullifierWitness: MerkleMapWitness,
     signature: Signature
   ) {
-    const isInitialized = this.isInitialized.getAndRequireEquals()
-    isInitialized.assertTrue()
+    const isInitialized = this.isInitialized.getAndRequireEquals();
+    isInitialized.assertTrue();
     const answerInitialRoot = this.answerMapRoot.getAndRequireEquals();
     const currentAnswerCount = this.answerCount.getAndRequireEquals();
     const surveyInitialRoot = this.surveyMapRoot.getAndRequireEquals();
@@ -94,7 +91,9 @@ export class SurveyContract extends SmartContract {
     const signatureMessage = Poseidon.hash(
       answererPublicKey.toFields().concat(survey.dbId)
     );
-    signature.verify(answererPublicKey, signatureMessage.toFields()).assertTrue();
+    signature
+      .verify(answererPublicKey, signatureMessage.toFields())
+      .assertTrue();
 
     // check for survey existance
     // check if there are surveys before emitting answers
