@@ -95,7 +95,7 @@ export class SurveyContract extends SmartContract {
 
     // check for signature
     const signatureMessage = Poseidon.hash(
-      answererPublicKey.toFields().concat(answer.data, survey.dbId)
+      answererPublicKey.toFields().concat(survey.dbId)
     );
     signature.verify(answererPublicKey, signatureMessage.toFields()).assertTrue();
 

@@ -126,7 +126,7 @@ describe('Survey', () => {
     [createAnswerStruct(2n,plainAnswerData,2n)]
 
   ]
-  const fakeSurveyId  = Field(100n)
+  const fakeSurveyId  = 100n
   beforeAll(async() => {
     if(proofsEnabled){
       await SurveyContract.compile()
@@ -343,7 +343,7 @@ describe('Survey', () => {
     let valid = true
     try {
       await deploy()
-      const answer = createAnswerStruct(0n,plainAnswerData,5n)
+      const answer = createAnswerStruct(0n,plainAnswerData,fakeSurveyId)
       await createAnswer(answer,senderPublicKey,senderPrivateKey)
       
     } catch(err) {
