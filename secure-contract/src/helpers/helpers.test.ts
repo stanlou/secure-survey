@@ -87,11 +87,10 @@ describe("jsonToFields", () => {
   it("should convert a JSON string into an array of Field elements", () => {
     const fieldData1 = jsonToFields(testData1);
     const fieldData2 = jsonToFields(testData2);
-    console.log(Poseidon.hash(fieldData1).toString())
-    console.log(Poseidon.hash(fieldData2).toString())
-
+    const sameAsFieldData1=jsonToFields(testData1);
     expect(Array.isArray(fieldData1)).toBe(true);
     expect(fieldData1).not.toEqual(fieldData2)
+    expect(fieldData1).toEqual(sameAsFieldData1)
 
     fieldData1.forEach(field => {
       expect(field).toBeInstanceOf(Field);

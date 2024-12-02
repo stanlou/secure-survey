@@ -1,4 +1,4 @@
-import { AccountUpdate, CircuitString, Field, MerkleMap, MerkleMapWitness, Mina, Poseidon, PrivateKey } from "o1js";
+/* import { AccountUpdate, CircuitString, Field, MerkleMap, MerkleMapWitness, Mina, Poseidon, PrivateKey } from "o1js";
 import { SurveyContract } from "./Survey.js";
 import { jsonToFields } from "./helpers/jsonToFields.js";
 
@@ -145,3 +145,4 @@ await pendingSaveTx2.wait();
 
 
 console.log(zkApp.surveyMapRoot.get().toString(),"zk rootAfter 2")
+ */

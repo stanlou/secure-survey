@@ -5,6 +5,7 @@ import {
   MerkleMapWitness,
   method,
   Poseidon,
+  Provable,
   PublicKey,
   Signature,
   SmartContract,
@@ -37,20 +38,16 @@ export class SurveyContract extends SmartContract {
   @state(Field) answerMapRoot = State<Field>();
   @state(Field) answerCount = State<Field>();
   @state(Field) nullifierMapRoot = State<Field>();
-  @state(Bool) isInitialized = State<Bool>(Bool(false));
+  @state(Bool) isInitialized = State<Bool>();
 
-
-  @method async initState() {
+  init() {
     super.init();
-    const surveyMerkleMap = new MerkleMap();
-    const answerMerkleMap = new MerkleMap();
-    const nullifierMerkleMap = new MerkleMap();
-    this.surveyMapRoot.set(surveyMerkleMap.getRoot());
+    this.surveyMapRoot.set(new MerkleMap().getRoot());
     this.surveyCount.set(Field(0));
-    this.answerMapRoot.set(answerMerkleMap.getRoot());
+    this.answerMapRoot.set(new MerkleMap().getRoot());
     this.answerCount.set(Field(0));
-    this.nullifierMapRoot.set(nullifierMerkleMap.getRoot());
-    this.isInitialized.set(Bool(true))
+    this.nullifierMapRoot.set(new MerkleMap().getRoot());
+    this.isInitialized.set(Bool(true));
   }
 
   @method async saveSurvey(

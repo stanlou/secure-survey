@@ -153,7 +153,6 @@ describe('Survey', () => {
     const deployTx = await Mina.transaction(deployerAccount,async()=> {
        AccountUpdate.fundNewAccount(deployerAccount)
       await zkApp.deploy()
-      await zkApp.initState()
     } )
     await deployTx.prove()
     await deployTx.sign([deployerKey,surveyZkAppPrivateKey]).send()
@@ -173,6 +172,18 @@ describe('Survey', () => {
     expect(surveyCount).toEqual(Field(0))
     expect(answerCount).toEqual(Field(0))
     expect(isInitialized).toEqual(Bool(true))
+  })
+
+  it("override smart contract states",async() => {
+    let valid= true
+    try {
+      await deploy()
+      await deploy()
+
+    }catch {
+      valid = false
+    }
+    expect(valid).toBeFalsy()
 
   })
 
