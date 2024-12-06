@@ -46,7 +46,17 @@ const routes: Array<RouteRecordRaw> = [
         /* webpackChunkName: "SurveyForm" */ "@/components/survey-form/SurveyForm.vue"
       ),
   },
- 
+  {
+    path: "/dashboard",
+    name: "dashboard",
+    meta: {
+      requiresAuth: true,
+    },
+    component: () =>
+      import(
+        /* webpackChunkName: "SurveyForm" */ "@/views/dashboard/Dashboard.vue"
+      ),
+  },
  
 ]
 
