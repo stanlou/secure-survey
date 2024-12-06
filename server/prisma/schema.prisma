@@ -14,11 +14,14 @@ datasource db {
 }
 
 model Survey {
-  id BigInt @id @default(autoincrement())
+  id String @id @default(dbgenerated("gen_random_uuid()"))
   data  Json
+  answers Answer[]
 }
 
 model Answer {
-  id BigInt @id  @default(autoincrement())
+  id String @id  @default(dbgenerated("gen_random_uuid()"))
   data  Json
+  surveyId String
+  survey   Survey @relation(fields: [surveyId],references: [id])
 }

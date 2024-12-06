@@ -1,4 +1,4 @@
-import { Field } from "o1js";
+import { CircuitString, Field } from "o1js";
 
 export const jsonToFields = (jsonString:string) =>  {
     const utf8Bytes = new TextEncoder().encode(jsonString);

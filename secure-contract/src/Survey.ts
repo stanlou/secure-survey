@@ -31,23 +31,22 @@ export class Answer extends Struct({
     return Poseidon.hash(Answer.toFields(this));
   }
 }
-
+// TODO:: uppercase 
+const initialMerkleMapRoot =  new MerkleMap().getRoot()
 export class SurveyContract extends SmartContract {
   @state(Field) surveyMapRoot = State<Field>();
   @state(Field) surveyCount = State<Field>();
   @state(Field) answerMapRoot = State<Field>();
   @state(Field) answerCount = State<Field>();
   @state(Field) nullifierMapRoot = State<Field>();
-  @state(Bool) isInitialized = State<Bool>();
+  @state(Bool) isInitialized = State(Bool(true));
 
   init() {
     super.init();
-    this.surveyMapRoot.set(new MerkleMap().getRoot());
-    this.surveyCount.set(Field(0));
-    this.answerMapRoot.set(new MerkleMap().getRoot());
-    this.answerCount.set(Field(0));
-    this.nullifierMapRoot.set(new MerkleMap().getRoot());
-    this.isInitialized.set(Bool(true));
+    this.surveyMapRoot.set(initialMerkleMapRoot);
+    this.answerMapRoot.set(initialMerkleMapRoot);
+    this.nullifierMapRoot.set(initialMerkleMapRoot);
+   // this.isInitialized.set(Bool(true));
   }
 
   // Method to save a survey in the Merkle tree

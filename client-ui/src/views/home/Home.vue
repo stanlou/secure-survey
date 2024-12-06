@@ -1,37 +1,37 @@
 <template>
-    <div>
-      <el-button type="primary" @click="authenticateWithMina">Connect Mina Wallet</el-button>
-      <p v-if="account">Connected Account: {{ account }}</p>
-      <p v-if="error" style="color: red;">Error: {{ error }}</p>
+  <div>
+    <div class="d-flex my-5">
+      <el-button type="primary" @click="handleCreateSurvey">Create Survey</el-button>
     </div>
-  </template>
-  
-  <script lang="ts">
-  import { defineComponent, ref } from "vue";
-  import { connectToMinaWallet } from "@/helper/walletConnection";
-  
-  export default defineComponent({
-    name: "MinaAuth",
-    setup() {
-      const account = ref<string | null>(null);
-      const error = ref<string | null>(null);
-  
-      const authenticateWithMina = async () => {
-        const result = await connectToMinaWallet();
-        if (result.success) {
-          account.value = result.account ?? null;
-          error.value = null;
-        } else {
-          account.value = null;
-          error.value = result.message ?? "Unknown error.";
-        }
-      };
-  
-      return { account, error, authenticateWithMina };
-    },
-  });
-  </script>
-  
-  <style scoped>
-  </style>
-  
+    <div v-for="survey in surveyList" :key="survey.id">
+      <div class="w-100">
+        <SurveyCard :survey="survey" />
+      </div>
+    </div>
+
+
+  </div>
+</template>
+
+<script lang="ts" setup>
+
+import { onMounted } from 'vue';
+import { useSurveyStore } from '@/store/surveyModule';
+import { storeToRefs } from 'pinia';
+import SurveyCard from '@/components/cards/SurveyCard.vue';
+import { useRouter } from 'vue-router';
+
+const { getSurveyList } = useSurveyStore()
+const { surveyList } = storeToRefs(useSurveyStore())
+const router = useRouter()
+const handleCreateSurvey = () => {
+  router.push({name:'create-survey'})
+}
+onMounted(async () => {
+  await getSurveyList();
+
+})
+
+</script>
+
+<style scoped></style>

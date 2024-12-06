@@ -191,7 +191,6 @@ describe('Survey', () => {
     }
     expect(valid).toBeFalsy();
   });
-
   const createSurvey = async (survey: Survey) => {
     const witness = surveyMerkleMap.getWitness(survey.dbId);
     const createSurveyTx = await Mina.transaction(senderPublicKey, async () => {

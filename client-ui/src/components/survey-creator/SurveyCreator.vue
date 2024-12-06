@@ -16,6 +16,7 @@ import { SurveyCreatorComponent } from "survey-creator-vue";
 import {onMounted} from 'vue'
 import axios from 'axios'
 import { settings } from "survey-creator-core";
+import { useSurveyStore } from '@/store/surveyModule';
 
 settings.designer.defaultAddQuestionType = "radiogroup";
 
@@ -27,14 +28,14 @@ const creatorOptions: ICreatorOptions = {
   questionTypes: ["checkbox","dropdown","radiogroup","tagbox","boolean","ranking"],
 };
 
-const API_URL = import.meta.env.VITE_API_URL;
 
+const { saveSurvey } = useSurveyStore()
 
 const creator = new SurveyCreatorModel(creatorOptions);
 
 const handleSaveSurvey = async () : Promise<any> => {
-  console.log("ddd",creator.JSON)
-   await axios.post(API_URL+'/survey/saveSurvey',creator.JSON)
+  await saveSurvey(creator.JSON)
+  
 }
 
 onMounted(() => {
