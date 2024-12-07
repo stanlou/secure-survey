@@ -9,9 +9,13 @@ import type {
 export default class ZkappWorkerClient {
   // ---------------------------------------------------------------------------------------
 
-  setActiveInstanceToBerkeley() {
-    return this._call('setActiveInstanceToBerkeley', {});
+  setActiveInstanceToDevnet() {
+    return this._call('setActiveInstanceToDevnet', {});
   }
+
+  setActiveInstanceToLocal() {
+    return this._call('setActiveInstanceToLocal', {});
+  } 
 
   loadContract() {
     return this._call('loadContract', {});
@@ -21,68 +25,16 @@ export default class ZkappWorkerClient {
     return this._call('compileContract', {});
   }
 
-  fetchAccount({
-    publicKey,
-  }: {
-    publicKey: PublicKey;
-  }): ReturnType<typeof fetchAccount> {
+  fetchAccount(publicKey:string): ReturnType<typeof fetchAccount> {
     const result = this._call('fetchAccount', {
-      publicKey58: publicKey.toBase58(),
+      publicKey58: publicKey
     });
     return result as ReturnType<typeof fetchAccount>;
   }
 
-  initZkappInstance(publicKey: PublicKey) {
-    return this._call('initZkappInstance', {
-      publicKey58: publicKey.toBase58(),
-    });
+  async initZkappInstance(publicKeyBase58: string) {
+    return await this._call('initZkappInstance',{publicKeyBase58});
   }
-
- /*  getIsInitialized() {
-    return this._call('getIsInitialized', {});
-  } */
-
-/*   setOffchainInstance(nullifier: Nullifier) {
-    return this._call('setOffChainInstance', { nullifier: nullifier });
-  } */
-
-/*   initState() {
-    return this._call('initState', {});
-  }
-
-  getVotingID() {
-    return this._call('getVotingID', {});
-  }
-
-  castVote({
-    voteOption,
-    nullifier,
-  }: {
-    voteOption: number;
-    nullifier: Nullifier;
-  }): Promise<any> {
-    return this._call('castVote', {
-      voteOption,
-      nullifier,
-    });
-  }
- */
-  createDeployTransaction(feePayer: string): Promise<any> {
-    return this._call('createDeployTransaction', {
-      feePayer,
-    });
-  }
-
-  // async getBallot(): Promise<any> {
-  //   const result = await this._call("getBallot", {});
-  //   return JSON.parse(result as string);
-  // }
-
-  // cast(candidate: number) {
-  //   return this._call("cast", {
-  //     candidate,
-  //   });
-  // }
 
   proveTransaction() {
     return this._call('proveTransaction', {});
@@ -104,7 +56,7 @@ export default class ZkappWorkerClient {
   nextId: number;
 
   constructor() {
-    this.worker = new Worker(new URL('./zkappWorker.ts', import.meta.url));
+    this.worker = new Worker(new URL('./zkappWorker.ts', import.meta.url), { type: 'module' });
     this.promises = {};
     this.nextId = 0;
 

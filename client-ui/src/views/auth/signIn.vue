@@ -1,37 +1,24 @@
 <template>
-    <div>
-      <el-button type="primary" @click="authenticateWithMina">Connect Mina Wallet</el-button>
-      <p v-if="account">Connected Account: {{ account }}</p>
-      <p v-if="error" style="color: red;">Error: {{ error }}</p>
-    </div>
-  </template>
-  
-  <script lang="ts">
-  import { defineComponent, ref } from "vue";
-  import { connectToMinaWallet } from "@/helper/walletConnection";
-  
-  export default defineComponent({
-    name: "MinaAuth",
-    setup() {
-      const account = ref<string | null>(null);
-      const error = ref<string | null>(null);
-  
-      const authenticateWithMina = async () => {
-        const result = await connectToMinaWallet();
-        if (result.success) {
-          account.value = result.account ?? null;
-          error.value = null;
-        } else {
-          account.value = null;
-          error.value = result.message ?? "Unknown error.";
-        }
-      };
-  
-      return { account, error, authenticateWithMina };
-    },
-  });
-  </script>
-  
-  <style scoped>
-  </style>
-  
+  <div>
+    {{  stepDisplay}}
+    <el-button type="primary" @click="authenticateWithMina">Connect Mina Wallet</el-button>
+    <p v-if="publicKeyBase58">Connected Account: {{ publicKeyBase58 }}</p>
+    <p v-if="error" style="color: red;">Error: {{ error }}</p>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref } from "vue";
+import {useZkAppStore } from "@/store/zkAppModule"
+import { storeToRefs } from "pinia";
+
+const {setupZkApp } = useZkAppStore()
+const {error, stepDisplay,publicKeyBase58} = storeToRefs(useZkAppStore())
+// Function to authenticate with Mina wallet
+const authenticateWithMina = async () => {
+  await setupZkApp();
+};
+</script>
+
+<style scoped>
+</style>
