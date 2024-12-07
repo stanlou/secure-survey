@@ -3,7 +3,6 @@ import {
     PublicKey,
     fetchAccount,
     Field,
-    Nullifier,
   } from 'o1js';
   
   import axios from 'axios';
@@ -11,7 +10,7 @@ import {
   
   // ---------------------------------------------------------------------------------------
   
-  import type { SurveyContract } from 'secure-survey';
+  import type { SurveyContract, Answer , Survey,fieldsToJson } from 'secure-survey';
   
   interface VerificationKeyData {
     data: string;
@@ -27,16 +26,11 @@ import {
   
   
   const functions = {
-    async setActiveInstanceToDevnet() {
+    setActiveInstanceToDevnet: async () =>  {
       const Network = Mina.Network('https://api.minascan.io/node/devnet/v1/graphql');
       console.log('Devnet network instance configured');
       Mina.setActiveInstance(Network);
     },  
-    setActiveInstanceToLocal: async (proofsEnabled:boolean) => {
-      console.log("setting active instance to Local with proof ",proofsEnabled)
-      const Local = await Mina.LocalBlockchain({ proofsEnabled });
-      Mina.setActiveInstance(Local);
-    },
     loadContract: async (args: {}) => {
       const { SurveyContract } = await import('secure-survey');
       state.SurveyContract = SurveyContract;
@@ -60,6 +54,9 @@ import {
     getTransactionJSON: async (args: {}) => {
       return state.transaction!.toJSON();
     },
+    createSurveyTransaction: async (args: {}) => {
+      
+    }
   };
   
   // ---------------------------------------------------------------------------------------
@@ -77,7 +74,6 @@ import {
     data: any;
   };
   
-  if (typeof window !== 'undefined') {
     addEventListener(
       'message',
       async (event: MessageEvent<ZkappWorkerRequest>) => {
@@ -90,34 +86,7 @@ import {
         postMessage(message);
       }
     );
-  }
   
-  function NullifierToJson(nullifier: Nullifier) {
-    const jsonNullifier = {
-      private: {
-        c: nullifier.private.c.toString(),
-        g_r: {
-          x: nullifier.private.g_r.x.toString(),
-          y: nullifier.private.g_r.y.toString(),
-        },
-        h_m_pk_r: {
-          x: nullifier.private.h_m_pk_r.x.toString(),
-          y: nullifier.private.h_m_pk_r.y.toString(),
-        },
-      },
-      public: {
-        nullifier: {
-          x: nullifier.public.nullifier.x.toString(),
-          y: nullifier.public.nullifier.y.toString(),
-        },
-        s: nullifier.public.s.toString(),
-      },
-      publicKey: {
-        x: nullifier.publicKey.x.toString(),
-        y: nullifier.publicKey.y.toString(),
-      },
-    };
-    return jsonNullifier;
-  }
+  
   
   console.log('Web Worker Successfully Initialized.');

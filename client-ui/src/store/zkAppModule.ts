@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import ZkappWorkerClient from "../zkappWorkerClient";
+
 interface MinaWallet {
   requestAccounts: () => Promise<string[]>;
   signMessage: (args: {
@@ -12,7 +13,8 @@ declare global {
     mina?: MinaWallet;
   }
 }
-const ZKAPP_ADDRESS = "";
+const ZKAPP_ADDRESS = "B62qoqZ3RsPo2nrWSNAGTbwK4xWdCCUgwPdQyAGSbGg9CWMPbrTc7HU";
+const TRANSACTION_FEE = 0.1
 export const useZkAppStore = defineStore("useZkAppModule", {
   state: () => ({
     zkappWorkerClient: null as null | ZkappWorkerClient,
@@ -24,6 +26,8 @@ export const useZkAppStore = defineStore("useZkAppModule", {
     zkappPublicKey: null as null | any,
     requestedConnexion: false,
     error: null as Object | any,
+    loading: false,
+    currentTransactionLink: "" 
   }),
   getters: {},
   actions: {
@@ -33,11 +37,9 @@ export const useZkAppStore = defineStore("useZkAppModule", {
           this.requestedConnexion = true;
           this.stepDisplay = "Loading web worker...";
           this.zkappWorkerClient = new ZkappWorkerClient();
-         // await new Promise((resolve) => setTimeout(resolve, 5000));
+          await new Promise((resolve) => setTimeout(resolve, 5000));
           this.stepDisplay = "Done loading web worker";
-           console.log("cccccccccccccccccc")
           await this.zkappWorkerClient.setActiveInstanceToDevnet();
-          console.log("qqqqqqqqqqq")
 
           const accounts = await window.mina.requestAccounts();
 
@@ -87,7 +89,42 @@ export const useZkAppStore = defineStore("useZkAppModule", {
           }
 
          this.accountExists = true;
+    },
+    async createSurvey(data: any) {
+      try {
+        this.loading = true;
+
+        this.stepDisplay = 'Creating a transaction...'
+        console.log('publicKeyBase58 sending to worker', this.publicKeyBase58);
+        await this.zkappWorkerClient!.fetchAccount(this.publicKeyBase58);
+    
+        await this.zkappWorkerClient!.createSurveyTransaction();
+    
+        this.stepDisplay = 'Creating proof...' 
+        await this.zkappWorkerClient!.proveTransaction();
+    
+        this.stepDisplay ='Requesting send transaction...' 
+        const transactionJSON = await this.zkappWorkerClient!.getTransactionJSON();
+    
+        this.stepDisplay = 'Getting transaction JSON...';
+        const { hash } = await (window as any).mina.sendTransaction({
+          transaction: transactionJSON,
+          feePayer: {
+            fee: TRANSACTION_FEE,
+            memo: '',
+          },
+        });
+        const transactionLink = `https://minascan.io/devnet/tx/${hash}`;
+        this.currentTransactionLink = transactionLink;
+        this.stepDisplay = transactionLink;
+      }catch(err) {
+
+      }finally {
+        this.loading = false;
+
       }
+  
+    }
   
   },
 });

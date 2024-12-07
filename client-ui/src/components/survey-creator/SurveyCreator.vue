@@ -34,7 +34,9 @@ const { saveSurvey } = useSurveyStore()
 const creator = new SurveyCreatorModel(creatorOptions);
 
 const handleSaveSurvey = async () : Promise<any> => {
+
   await saveSurvey(creator.JSON)
+  
   
 }
 

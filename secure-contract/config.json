@@ -1,4 +1,14 @@
 {
   "version": 1,
-  "deployAliases": {}
+  "deployAliases": {
+    "secure-contract-ch1": {
+      "networkId": "testnet",
+      "url": "https://api.minascan.io/node/devnet/v1/graphql",
+      "keyPath": "keys/secure-contract-ch1.json",
+      "feepayerKeyPath": "C:\\Users\\louki/.cache/zkapp-cli/keys/secure-survey-ch1.json",
+      "feepayerAlias": "secure-survey-ch1",
+      "fee": "0.1",
+      "smartContract": "SurveyContract"
+    }
+  }
 }

@@ -1,6 +1,8 @@
 import axios from 'axios'
 import { defineStore } from 'pinia'
+import {useZkAppStore } from "@/store/zkAppModule"
 
+const {createSurvey} = useZkAppStore()
 const API_Base_URL = import.meta.env.VITE_API_URL
 export const useSurveyStore = defineStore('surveyModule', {
     state: () => ({ 
@@ -22,6 +24,7 @@ export const useSurveyStore = defineStore('surveyModule', {
         try {
             const {data} = await axios.post(API_Base_URL+"/survey/save",surveyData)
             this.surveyList = [...this.surveyList , data.createdSurvey]    
+            await createSurvey(data)
         } catch(err :any) {
             this.error = err
         }

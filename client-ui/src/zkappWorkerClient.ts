@@ -1,4 +1,4 @@
-import { fetchAccount, PublicKey, Nullifier } from 'o1js';
+import { fetchAccount } from 'o1js';
 
 import type {
   ZkappWorkerRequest,
@@ -7,25 +7,21 @@ import type {
 } from './zkappWorker';
 
 export default class ZkappWorkerClient {
-  // ---------------------------------------------------------------------------------------
+  // worker functions
 
-  setActiveInstanceToDevnet() {
+  async setActiveInstanceToDevnet() {
     return this._call('setActiveInstanceToDevnet', {});
   }
 
-  setActiveInstanceToLocal() {
-    return this._call('setActiveInstanceToLocal', {});
-  } 
-
-  loadContract() {
+  async loadContract() {
     return this._call('loadContract', {});
   }
 
-  compileContract() {
+  async compileContract() {
     return this._call('compileContract', {});
   }
 
-  fetchAccount(publicKey:string): ReturnType<typeof fetchAccount> {
+  async fetchAccount(publicKey:string): ReturnType<typeof fetchAccount> {
     const result = this._call('fetchAccount', {
       publicKey58: publicKey
     });
@@ -36,7 +32,7 @@ export default class ZkappWorkerClient {
     return await this._call('initZkappInstance',{publicKeyBase58});
   }
 
-  proveTransaction() {
+  async proveTransaction() {
     return this._call('proveTransaction', {});
   }
 
@@ -45,7 +41,7 @@ export default class ZkappWorkerClient {
     return result;
   }
 
-  // ---------------------------------------------------------------------------------------
+  // worker initialization
 
   worker: Worker;
 

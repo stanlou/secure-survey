@@ -63,10 +63,10 @@ export class SurveyContract extends SmartContract {
     survey.data.assertNotEquals(Field(0), "Survey data must not be empty.");
 
     // Verify the witness and update the Merkle tree
-    const [rootBefore, key] = witness.computeRootAndKeyV2(Field(0));
+    const [rootBefore, key] = witness.computeRootAndKey(Field(0));
     rootBefore.assertEquals(initialRoot, "Invalid Merkle tree witness.");
     key.assertEquals(survey.dbId, "Survey ID does not match the witness key.");
-    const [rootAfter, _] = witness.computeRootAndKeyV2(survey.hash());
+    const [rootAfter, _] = witness.computeRootAndKey(survey.hash());
     
     // Update the contract state
     this.surveyMapRoot.set(rootAfter);
@@ -96,7 +96,7 @@ export class SurveyContract extends SmartContract {
     answer.data.assertNotEquals(Field(0), "Answer data must not be empty.");
 
     // Verify the answer Merkle tree witness
-    const [rootBefore, key] = answerWitness.computeRootAndKeyV2(Field(0));
+    const [rootBefore, key] = answerWitness.computeRootAndKey(Field(0));
     rootBefore.assertEquals(answerInitialRoot, "Invalid answer Merkle tree witness.");
     key.assertEquals(answer.dbId, "Answer ID does not match the witness key.");
 
@@ -111,7 +111,7 @@ export class SurveyContract extends SmartContract {
     // Verify the survey exists
     survey.data.assertNotEquals(Field(0), "Survey data must not be empty.");
     const [currentSurveyRoot, currentSurveyKey] =
-      surveyWitness.computeRootAndKeyV2(survey.data);
+      surveyWitness.computeRootAndKey(survey.data);
     currentSurveyRoot.assertEquals(surveyInitialRoot, "Survey does not exist.");
     currentSurveyKey.assertEquals(survey.dbId, "Survey ID mismatch.");
 
@@ -120,12 +120,12 @@ export class SurveyContract extends SmartContract {
       answererPublicKey.toFields().concat([survey.dbId])
     );
     const [currentNullifierRoot, currentNullifierKey] =
-      nullifierWitness.computeRootAndKeyV2(Field(0));
+      nullifierWitness.computeRootAndKey(Field(0));
     currentNullifierRoot.assertEquals(nullifierInitialRoot, "Invalid nullifier witness.");
     currentNullifierKey.assertEquals(nullifierKey, "Nullifier key mismatch.");
 
-    const [rootAfter, _] = answerWitness.computeRootAndKeyV2(answer.hash());
-    const [nullifierRootAfter, _key] = nullifierWitness.computeRootAndKeyV2(Field(1));
+    const [rootAfter, _] = answerWitness.computeRootAndKey(answer.hash());
+    const [nullifierRootAfter, _key] = nullifierWitness.computeRootAndKey(Field(1));
     this.answerMapRoot.set(rootAfter);
     this.nullifierMapRoot.set(nullifierRootAfter);
     this.answerCount.set(currentAnswerCount.add(Field(1)));

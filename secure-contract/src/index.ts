@@ -1,3 +1,4 @@
-import { SurveyContract } from './Survey';
+import { fieldsToJson } from './helpers/fieldsToJson';
+import { SurveyContract, Answer , Survey, } from './Survey';
 
-export { SurveyContract };
+export { SurveyContract,Answer , Survey , fieldsToJson};

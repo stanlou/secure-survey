@@ -63,7 +63,7 @@ router.get(
 router.get("/search", async (req: Request, res: Response): Promise<any> => {
   try {
     const { key } = req.query;
-
+  
     if (!key || typeof key !== "string") {
       return res
         .status(400)
@@ -94,6 +94,6 @@ router.get("/search", async (req: Request, res: Response): Promise<any> => {
     console.error("Error searching surveys :", error);
     res.status(500).json({ message: "Failed to search surveys " });
   }
-});
+});  
 
 export default router;

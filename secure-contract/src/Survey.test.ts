@@ -100,8 +100,8 @@ describe('Survey', () => {
     question5: 'Item 3',
     question6: ['Item 2', 'Item 1', 'Item 3'],
   });
-  const createSurveyStruct = (dbId: bigint, surveyData: string) => {
-    const hashedSurveyId = Poseidon.hash([Field(dbId)]);
+  const createSurveyStruct = (dbId: string, surveyData: string) => {
+    const hashedSurveyId = Poseidon.hash(jsonToFields(dbId));
     const hashedSurveyData = Poseidon.hash(jsonToFields(surveyData));
     return new Survey({
       dbId: hashedSurveyId,
@@ -109,12 +109,12 @@ describe('Survey', () => {
     });
   };
   const createAnswerStruct = (
-    dbId: bigint,
+    dbId: string,
     answerData: string,
-    surveyId: bigint
+    surveyId: string
   ) => {
-    const hashedAnswerId = Poseidon.hash([Field(dbId)]);
-    const hashedSurveyId = Poseidon.hash([Field(surveyId)]);
+    const hashedAnswerId = Poseidon.hash(jsonToFields(dbId));
+    const hashedSurveyId = Poseidon.hash(jsonToFields(surveyId));
     const hashedAnswerData = Poseidon.hash(jsonToFields(answerData));
     return new Answer({
       dbId: hashedAnswerId,
@@ -123,17 +123,17 @@ describe('Survey', () => {
     });
   };
   const testSurveys = [
-    createSurveyStruct(1n, plainSurveyData),
-    createSurveyStruct(2n, plainSurveyData),
+    createSurveyStruct("1n", plainSurveyData),
+    createSurveyStruct("2n", plainSurveyData),
   ];
   const testAnswers = [
     [
-      createAnswerStruct(1n, plainAnswerData, 1n),
-      createAnswerStruct(3n, plainAnswerData, 1n),
+      createAnswerStruct("1n", plainAnswerData, "1n"),
+      createAnswerStruct("3n", plainAnswerData, "1n"),
     ],
-    [createAnswerStruct(2n, plainAnswerData, 2n)],
+    [createAnswerStruct("2n", plainAnswerData, "2n")],
   ];
-  const fakeSurveyId = 100n;
+  const fakeSurveyId = "100n";
   beforeAll(async () => {
     if (proofsEnabled) {
       await SurveyContract.compile();
@@ -365,7 +365,7 @@ describe('Survey', () => {
     try {
       await deploy();
       await createSurvey(testSurveys[0]);
-      const answerEmptySurvey = createAnswerStruct(0n, plainAnswerData, 0n);
+      const answerEmptySurvey = createAnswerStruct("0n", plainAnswerData, "0n");
       await createAnswer(answerEmptySurvey, senderPublicKey, senderPrivateKey);
     } catch {
       valid = false;
@@ -389,7 +389,7 @@ describe('Survey', () => {
     let valid = true;
     try {
       await deploy();
-      const answer = createAnswerStruct(0n, plainAnswerData, fakeSurveyId);
+      const answer = createAnswerStruct("0n", plainAnswerData, fakeSurveyId);
       await createAnswer(answer, senderPublicKey, senderPrivateKey);
     } catch (err) {
       valid = false;
