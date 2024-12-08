@@ -11,6 +11,7 @@ import {
 } from 'o1js';
 import { Answer, Survey, SurveyContract } from './Survey';
 import { jsonToFields } from './helpers/jsonToFields';
+import { createAnswerStruct, createSurveyStruct } from './helpers/structConstructor';
 
 let proofsEnabled = false;
 describe('Survey', () => {
@@ -100,28 +101,6 @@ describe('Survey', () => {
     question5: 'Item 3',
     question6: ['Item 2', 'Item 1', 'Item 3'],
   });
-  const createSurveyStruct = (dbId: string, surveyData: string) => {
-    const hashedSurveyId = Poseidon.hash(jsonToFields(dbId));
-    const hashedSurveyData = Poseidon.hash(jsonToFields(surveyData));
-    return new Survey({
-      dbId: hashedSurveyId,
-      data: hashedSurveyData,
-    });
-  };
-  const createAnswerStruct = (
-    dbId: string,
-    answerData: string,
-    surveyId: string
-  ) => {
-    const hashedAnswerId = Poseidon.hash(jsonToFields(dbId));
-    const hashedSurveyId = Poseidon.hash(jsonToFields(surveyId));
-    const hashedAnswerData = Poseidon.hash(jsonToFields(answerData));
-    return new Answer({
-      dbId: hashedAnswerId,
-      data: hashedAnswerData,
-      surveyDbId: hashedSurveyId,
-    });
-  };
   const testSurveys = [
     createSurveyStruct("1n", plainSurveyData),
     createSurveyStruct("2n", plainSurveyData),

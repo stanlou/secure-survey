@@ -15,7 +15,7 @@ onMounted(async() => {
   await setupZkApp()
 })
 watch([() => zkappWorkerClient.value,() => hasBeenSetup.value,() => accountExists.value],async ()=> {
-  if(hasBeenSetup.value && !accountExists.value && requestedConnexion.value){
+  if(hasBeenSetup.value && !accountExists.value){
     await checkAccountExists()
   }
 })

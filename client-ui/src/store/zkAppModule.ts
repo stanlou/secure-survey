@@ -23,7 +23,6 @@ export const useZkAppStore = defineStore("useZkAppModule", {
     hasBeenSetup: false,
     accountExists: false,
     publicKeyBase58: null as null | any,
-    zkappPublicKey: null as null | any,
     requestedConnexion: false,
     error: null as Object | any,
     loading: false,
@@ -49,7 +48,7 @@ export const useZkAppStore = defineStore("useZkAppModule", {
           const res = await this.zkappWorkerClient.fetchAccount(
             this.publicKeyBase58
           );
-          this.accountExists = res.error === null;
+                    this.accountExists = res.error === null;
 
           await this.zkappWorkerClient.loadContract();
 
@@ -62,6 +61,9 @@ export const useZkAppStore = defineStore("useZkAppModule", {
           this.hasBeenSetup = true;
           this.hasWallet = true;
           this.stepDisplay = "";
+          await this.zkappWorkerClient.loadOffChainStorage()      
+          console.log("loaded offchainstorage....")
+
         } catch (error: any) {
           return { message: error.message };
         }
@@ -90,38 +92,36 @@ export const useZkAppStore = defineStore("useZkAppModule", {
 
          this.accountExists = true;
     },
-    async createSurvey(data: any) {
+    async createSurvey(survey: any) {
       try {
         this.loading = true;
 
         this.stepDisplay = 'Creating a transaction...'
-        console.log('publicKeyBase58 sending to worker', this.publicKeyBase58);
         await this.zkappWorkerClient!.fetchAccount(this.publicKeyBase58);
-    
-        await this.zkappWorkerClient!.createSurveyTransaction();
+
+        await this.zkappWorkerClient!.createSurveyTransaction(survey);
     
         this.stepDisplay = 'Creating proof...' 
         await this.zkappWorkerClient!.proveTransaction();
     
-        this.stepDisplay ='Requesting send transaction...' 
-        const transactionJSON = await this.zkappWorkerClient!.getTransactionJSON();
-    
         this.stepDisplay = 'Getting transaction JSON...';
-        const { hash } = await (window as any).mina.sendTransaction({
+        const transactionJSON = await this.zkappWorkerClient!.getTransactionJSON();
+        this.stepDisplay ='Requesting send transaction...' 
+
+         const { hash } = await (window as any).mina.sendTransaction({
           transaction: transactionJSON,
           feePayer: {
             fee: TRANSACTION_FEE,
             memo: '',
           },
-        });
-        const transactionLink = `https://minascan.io/devnet/tx/${hash}`;
+        }); 
+         const transactionLink = `https://minascan.io/devnet/tx/${hash}`;
         this.currentTransactionLink = transactionLink;
-        this.stepDisplay = transactionLink;
+         this.stepDisplay = transactionLink;
       }catch(err) {
-
+        console.log("error ",err)
       }finally {
         this.loading = false;
-
       }
   
     }

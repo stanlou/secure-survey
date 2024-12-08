@@ -42,6 +42,15 @@ router.get("/findOne/:id", async (req: Request, res: Response) : Promise<any> =>
     res.status(500).json({ message: "Failed to find answer" });
   }
 });
+router.get("/findMany", async (req: Request, res: Response): Promise<any> => {
+  try {
+    const answerList = await prisma.answer.findMany();
+    res.status(200).send({ answerList });
+  } catch (error) {
+    console.error("Error fetching answer  list:", error);
+    res.status(500).json({ message: "Failed to find answer list" });
+  }
+});
 
 export default router;
 

@@ -1,4 +1,4 @@
-import { fieldsToJson } from './helpers/fieldsToJson';
+import { createAnswerStruct, createSurveyStruct } from './helpers/structConstructor';
 import { SurveyContract, Answer , Survey, } from './Survey';
 
-export { SurveyContract,Answer , Survey , fieldsToJson};
+export { SurveyContract,Answer , Survey , createAnswerStruct, createSurveyStruct};
