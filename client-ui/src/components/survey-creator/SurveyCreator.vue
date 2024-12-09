@@ -11,10 +11,9 @@
 import 'survey-core/defaultV2.min.css';
 import "survey-creator-core/survey-creator-core.min.css";
 import type { ICreatorOptions } from "survey-creator-core";
-import { copyObject, SurveyCreatorModel } from "survey-creator-core";
+import {  SurveyCreatorModel } from "survey-creator-core";
 import { SurveyCreatorComponent } from "survey-creator-vue";
 import {onMounted} from 'vue'
-import axios from 'axios'
 import { settings } from "survey-creator-core";
 import { useSurveyStore } from '@/store/surveyModule';
 

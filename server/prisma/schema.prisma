@@ -25,3 +25,7 @@ model Answer {
   surveyId String
   survey   Survey @relation(fields: [surveyId],references: [id])
 }
+
+model Nullifier {
+  key   String @id 
+}

@@ -2,8 +2,10 @@ import express, { Express } from "express";
 import dotenv from "dotenv";
 import surveyRoute from "./routes/surveyRoute";
 import answerRoute from "./routes/answerRoute";
+import nullifierRoute from "./routes/nullifierRoute";
 
 import cors from "cors";
+import offchainRoute from "./routes/offchainRoute";
 
 dotenv.config();
 
@@ -18,6 +20,10 @@ app.use(express.json());
 app.use("/survey", surveyRoute);
 // Register answer routes
 app.use("/answer", answerRoute);
+// Register nullifier routes
+app.use("/nullifier", nullifierRoute);
+// offChainStorage managemenet
+app.use("/offchain", offchainRoute);
 
 app.listen(port, () => {
   console.log(`[server]: Server is running at http://localhost:${port}`);

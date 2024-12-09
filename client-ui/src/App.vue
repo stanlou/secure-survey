@@ -9,7 +9,7 @@
 import { onMounted, watch } from 'vue';
 import {useZkAppStore } from "@/store/zkAppModule"
 import { storeToRefs } from 'pinia';
-const {zkappWorkerClient,hasBeenSetup,accountExists,requestedConnexion} = storeToRefs(useZkAppStore())
+const {zkappWorkerClient,hasBeenSetup,accountExists} = storeToRefs(useZkAppStore())
 const {checkAccountExists,setupZkApp} = (useZkAppStore())
 onMounted(async() => {
   await setupZkApp()

@@ -6,7 +6,6 @@ import {
   method,
   Poseidon,
   PublicKey,
-  Signature,
   SmartContract,
   State,
   state,
@@ -46,9 +45,23 @@ export class SurveyContract extends SmartContract {
     this.surveyMapRoot.set(initialMerkleMapRoot);
     this.answerMapRoot.set(initialMerkleMapRoot);
     this.nullifierMapRoot.set(initialMerkleMapRoot);
-   // this.isInitialized.set(Bool(true));
   }
 
+  // Method to reinitialize the smart contract states , only used for development 
+  @method async initState(){
+    const currentSurveyRoot = this.surveyMapRoot.getAndRequireEquals()
+    const currentAnswerRoot = this.answerMapRoot.getAndRequireEquals()
+    const currentNullifierRoot = this.nullifierMapRoot.getAndRequireEquals()
+    const currentSurveyCount = this.surveyCount.getAndRequireEquals()
+    const currentAnswerCount = this.answerCount.getAndRequireEquals()
+
+    this.surveyMapRoot.set(initialMerkleMapRoot);
+    this.answerMapRoot.set(initialMerkleMapRoot);
+    this.nullifierMapRoot.set(initialMerkleMapRoot);
+    this.surveyCount.set(Field(0))
+    this.answerCount.set(Field(0))
+
+  }
   // Method to save a survey in the Merkle tree
   @method async saveSurvey(survey: Survey, witness: MerkleMapWitness) {
     // Ensure the contract is initialized
@@ -81,7 +94,6 @@ export class SurveyContract extends SmartContract {
     surveyWitness: MerkleMapWitness,
     answererPublicKey: PublicKey,
     nullifierWitness: MerkleMapWitness,
-    signature: Signature
   ) {
     // Ensure the contract is initialized
     const isInitialized = this.isInitialized.getAndRequireEquals();
@@ -99,14 +111,6 @@ export class SurveyContract extends SmartContract {
     const [rootBefore, key] = answerWitness.computeRootAndKey(Field(0));
     rootBefore.assertEquals(answerInitialRoot, "Invalid answer Merkle tree witness.");
     key.assertEquals(answer.dbId, "Answer ID does not match the witness key.");
-
-    // Validate the signature
-    const signatureMessage = Poseidon.hash(
-      answererPublicKey.toFields().concat(survey.dbId)
-    );
-    signature
-      .verify(answererPublicKey, signatureMessage.toFields())
-      .assertTrue("Invalid signature for the answer.");
 
     // Verify the survey exists
     survey.data.assertNotEquals(Field(0), "Survey data must not be empty.");

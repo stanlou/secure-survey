@@ -4,13 +4,15 @@ import {
     fetchAccount,
     Field,
     MerkleMap,
+    Poseidon,
   } from 'o1js';
   
   import axios from 'axios';
   type Transaction = Awaited<ReturnType<typeof Mina.transaction>>;
   
 
-  import { SurveyContract, Answer , Survey,createSurveyStruct } from 'secure-survey';
+  import { SurveyContract, Answer , Survey,createSurveyStruct, createAnswerStruct } from 'secure-survey';
+import { th } from 'element-plus/es/locales.mjs';
   
   const API_Base_URL = import.meta.env.VITE_API_URL
   
@@ -43,16 +45,31 @@ import {
     }   
     
     async loadOffChainState() {
-      const {data:surveyListData}  = await axios.get(API_Base_URL+"/survey/findMany")
-      this.surveyCount = surveyListData.surveyList?.length
-      console.log(surveyListData,"surveyListDatasurveyListData")
-      surveyListData.surveyList.map((e:any) => {
+      const {data}  = await axios.get(API_Base_URL+"/offchain/getAll")
+      const surveyList = data.surveyList
+      const answerList = data.answerList
+      const nullifierList = data.nullifierList
+
+      this.surveyCount = surveyList?.length
+      surveyList.map((e:any) => {
         const id = e.id
         const data = JSON.stringify(e.data)
         const survey = createSurveyStruct(id,data) 
         this.surveyMerkleMap.set(survey.dbId,survey.hash())
       })
-      console.log(JSON.stringify(this.surveyMerkleMap.getRoot()))
+      this.answerCount = answerList?.length
+      answerList.map((e:any) => {
+        const id = e.id
+        const data = JSON.stringify(e.data)
+        const surveyId = e.surveyId
+        const answer = createAnswerStruct(id,data,surveyId) 
+        this.surveyMerkleMap.set(answer.dbId,answer.hash())
+
+      })
+      nullifierList.map((e:any) => {
+        this.nullifierMerkleMap.set(e.key,Field(1))
+      })
+      
     }
   }
   const functions = {
@@ -89,14 +106,49 @@ import {
       let offChainStorage = new OffChainStorage()
       offChainStorage.loadOffChainState()
       state.offChainStorage = offChainStorage
-      
+    },
+    createSurveyWitness : async (args: {surveyId:any}) => {
+      return state.offChainStorage!.surveyMerkleMap.getWitness(args.surveyId);
+    },
+    createAnswerWitness : async (args: {answerId:any}) => {
+      return state.offChainStorage!.answerMerkleMap.getWitness(args.answerId);
     },
     createSurveyTransaction: async (args: {survey:any}) => {
-      const surveyStruct = createSurveyStruct(args.survey.id,args.survey.data)
-      const witness = state.offChainStorage!.surveyMerkleMap.getWitness(surveyStruct.dbId);
+      const surveyStruct = createSurveyStruct(args.survey.id,JSON.stringify(args.survey.data))
+      const witness = await functions.createSurveyWitness({surveyId:surveyStruct.dbId});
       state.transaction = await Mina.transaction(async () => {
         await state.zkappInstance!.saveSurvey(surveyStruct,witness)
       })
+      state.transaction!.send()
+    },
+     createAnswerTransaction: async (args: {answer:any,publicKeybase58:string}) => {
+      const answerStruct = createAnswerStruct(args.answer.id,args.answer.data,args.answer.surveyId)
+      const answerWitness = await functions.createAnswerWitness(answerStruct.dbId);
+      const surveyWitness = await functions.createSurveyWitness(answerStruct.surveyDbId);
+      const answeredSurveyData = state.offChainStorage!.surveyMerkleMap.get(answerStruct.surveyDbId);
+      const answererPublicKey = PublicKey.fromBase58(args.publicKeybase58);
+      const nullifierKey = Poseidon.hash(
+        answererPublicKey.toFields().concat([answerStruct.surveyDbId])
+      );
+  
+      const nullifierWitness = state.offChainStorage!.nullifierMerkleMap.getWitness(nullifierKey);
+      const survey = new Survey({
+        dbId: answerStruct.surveyDbId,
+        data: answeredSurveyData,
+      });
+      state.transaction = await Mina.transaction(
+        answererPublicKey,
+        async () => {
+          await state.zkappInstance!.saveAnswer(
+            answerStruct,
+            survey,
+            answerWitness,
+            surveyWitness,
+            answererPublicKey,
+            nullifierWitness,
+          );
+        }
+      );
       state.transaction!.send()
     },
   };

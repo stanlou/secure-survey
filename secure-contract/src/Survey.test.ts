@@ -7,7 +7,6 @@ import {
   Poseidon,
   PrivateKey,
   PublicKey,
-  Signature,
 } from 'o1js';
 import { Answer, Survey, SurveyContract } from './Survey';
 import { jsonToFields } from './helpers/jsonToFields';
@@ -236,12 +235,7 @@ describe('Survey', () => {
     );
 
     const nullifierWitness = nullifierMerkleMap.getWitness(nullifierKey);
-    const signature = Signature.create(
-      answererPrivateKey,
-      Poseidon.hash(
-        answererPublicKey.toFields().concat([answer.surveyDbId])
-      ).toFields()
-    );
+
     const survey = new Survey({
       dbId: answer.surveyDbId,
       data: answeredSurveyData,
@@ -256,7 +250,6 @@ describe('Survey', () => {
           surveyWitness,
           answererPublicKey,
           nullifierWitness,
-          signature
         );
       }
     );

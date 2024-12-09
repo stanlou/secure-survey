@@ -1,5 +1,9 @@
 import axios from 'axios'
 import { defineStore } from 'pinia'
+import { useZkAppStore } from './zkAppModule'
+
+
+const {createAnswer} = useZkAppStore()
 
 const API_Base_URL = import.meta.env.VITE_API_URL
 export const useAnswerStore = defineStore('answerModule', {
@@ -11,7 +15,8 @@ export const useAnswerStore = defineStore('answerModule', {
     actions: {
       async saveAnswer(answerData:any) {
         try {
-            await axios.post(API_Base_URL+"/answer/save",answerData)
+            const { data } = await axios.post(API_Base_URL+"/answer/save",answerData)
+            await createAnswer(data)
         } catch(err :any) {
             this.error = err
         }
