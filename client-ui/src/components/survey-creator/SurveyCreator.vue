@@ -32,11 +32,10 @@ const { saveSurvey } = useSurveyStore()
 
 const creator = new SurveyCreatorModel(creatorOptions);
 
-const handleSaveSurvey = async () : Promise<any> => {
+const handleSaveSurvey = async () => {
 
   await saveSurvey(creator.JSON)
-  
-  
+
 }
 
 onMounted(() => {

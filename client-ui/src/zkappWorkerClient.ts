@@ -1,10 +1,12 @@
-import { fetchAccount } from 'o1js';
+import { fetchAccount, Field, PublicKey } from 'o1js';
 
 import type {
   ZkappWorkerRequest,
   ZkappWorkerReponse,
   WorkerFunctions,
 } from './zkappWorker';
+import { Answer } from 'secure-survey';
+import { AnswerType, SurveyType } from './types';
 
 export default class ZkappWorkerClient {
   // worker functions
@@ -45,11 +47,11 @@ export default class ZkappWorkerClient {
     return await this._call('loadOffChainStorage', {});
   }
 
-  async createSurveyTransaction(survey: any) {
+  async createSurveyTransaction(survey: SurveyType) {
     return await this._call('createSurveyTransaction', {survey});
   }
 
-   async createAnswerTransaction(answer: any,publicKeyBase58: string) {
+   async createAnswerTransaction(answer: AnswerType,publicKeyBase58: string) {
     return await this._call('createAnswerTransaction', {answer,publicKeyBase58});
   }
   // worker initialization
@@ -74,18 +76,23 @@ export default class ZkappWorkerClient {
   }
 
   _call(fn: WorkerFunctions, args: any) {
-    return new Promise((resolve, reject) => {
-      this.promises[this.nextId] = { resolve, reject };
-
-      const message: ZkappWorkerRequest = {
-        id: this.nextId,
-        fn,
-        args,
-      };
-
-      this.worker.postMessage(message);
-
-      this.nextId++;
-    });
+    try {
+      return new Promise((resolve, reject) => {
+        this.promises[this.nextId] = { resolve, reject };
+  
+        const message: ZkappWorkerRequest = {
+          id: this.nextId,
+          fn,
+          args,
+        };
+  
+        this.worker.postMessage(message);
+  
+        this.nextId++;
+      });
+  
+    }catch(err){
+      console.log(err)
+    }
   }
 }

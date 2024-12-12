@@ -2,7 +2,10 @@ import { defineStore } from "pinia";
 import ZkappWorkerClient from "../zkappWorkerClient";
 import axios from "axios";
 import { API_URL } from "../webService/apiService";
-import { Poseidon } from "o1js";
+import { Field, Poseidon, PublicKey } from "o1js";
+import { createAnswerStruct } from "secure-survey";
+import { createNullifier } from "../helper/nullifier";
+import { AnswerType, SurveyType } from "../types";
 
 interface MinaWallet {
   requestAccounts: () => Promise<string[]>;
@@ -52,13 +55,13 @@ export const useZkAppStore = defineStore("useZkAppModule", {
             this.publicKeyBase58
           );
           this.accountExists = res.error === null;
-
+          
           await this.zkappWorkerClient.loadContract();
 
           this.stepDisplay = "Compiling zkApp...";
-          //   await this.zkappWorkerClient.compileContract();
+          await this.zkappWorkerClient.compileContract();
           this.stepDisplay = "zkApp compiled";
-
+          
           await this.zkappWorkerClient.initZkappInstance(ZKAPP_ADDRESS);
 
           this.hasBeenSetup = true;
@@ -96,14 +99,12 @@ export const useZkAppStore = defineStore("useZkAppModule", {
 
       this.accountExists = true;
     },
-    async createSurvey(survey: any) {
+    async createSurvey(survey: SurveyType) {
       try {
         this.loading = true;
 
         this.stepDisplay = "Creating a transaction...";
         await this.zkappWorkerClient!.fetchAccount(this.publicKeyBase58);
-       // await this.zkappWorkerClient!.fetchAccount('B62qng3DckFGVnkr6WGwAxsMx4UqizCZWWxJuQy7WrsRsG9narwvfuC');
-        
 
         await this.zkappWorkerClient!.createSurveyTransaction(survey);
 
@@ -131,12 +132,14 @@ export const useZkAppStore = defineStore("useZkAppModule", {
         this.loading = false;
       }
     },
-    async createAnswer(answer: any) {
+    async createAnswer(answer: AnswerType) {
       try {
         this.loading = true;
         await this.zkappWorkerClient!.fetchAccount(this.publicKeyBase58);
         this.stepDisplay = "Creating a nullifier"
-        const nullifierKey = Poseidon.hash([this.publicKeyBase58.toFields().concat([answer.surveyId])])
+        const nullifierKey = createNullifier(this.publicKeyBase58,answer)
+
+        /// FIX THAT HARCODED 
         await axios.post(API_URL+"/nullifier/save",{key:nullifierKey});
 
         this.stepDisplay = "Creating a transaction...";

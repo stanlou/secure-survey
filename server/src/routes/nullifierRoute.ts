@@ -3,7 +3,7 @@ import prisma from "../../prisma/client";
 
 const router = Router();
 
-router.post("/save", async (req: Request, res: Response) : Promise<any> => {
+router.post("/save", async (req: Request, res: Response)  => {
   try {
     const nullifierJson = req.body; 
     const createNullifier = await prisma.nullifier.create({
@@ -18,7 +18,7 @@ router.post("/save", async (req: Request, res: Response) : Promise<any> => {
 });
 
 
-router.get("/findOne/:key", async (req: Request, res: Response) : Promise<any> => {
+router.get("/findOne/:key", async (req: Request, res: Response) => {
   try {  
     const nullifier = await prisma.nullifier.findUnique({
       where:{
@@ -35,7 +35,7 @@ router.get("/findOne/:key", async (req: Request, res: Response) : Promise<any> =
   }
 });
 
-router.get("/findMany", async (req: Request, res: Response): Promise<any> => {
+router.get("/findMany", async (req: Request, res: Response) => {
   try {
     const nullifierList = await prisma.nullifier.findMany();
     res.status(200).send({ nullifierList });

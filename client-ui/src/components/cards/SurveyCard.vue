@@ -17,13 +17,17 @@
 </template>
 <script setup lang="ts">
 import {useRouter} from 'vue-router';
+import {SurveyType} from '../../types';
+import { PropType } from 'vue';
+
 const props = defineProps({
     survey:{
-        required:true
+        required:true,
+        type: Object as PropType<SurveyType>
     }
 })
 const router = useRouter()
-const handleParticipateClick = (survey:any) => {
+const handleParticipateClick = () => {
     router.push({name:'answer-survey',params:{id:props.survey.id}})
 }
 </script>

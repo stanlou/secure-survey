@@ -3,7 +3,7 @@ import prisma from "../../prisma/client";
 
 const router = Router();
 
-router.get("/getAll", async (req: Request, res: Response): Promise<any> => {
+router.get("/getAll", async (req: Request, res: Response) => {
   try {
     const [nullifierList,surveyList,answerList] = await Promise.all([
         prisma.nullifier.findMany(),

@@ -31,7 +31,7 @@ router.post("/save", async (req: Request, res: Response): Promise<any> => {
   }
 });
 
-router.get("/findMany", async (req: Request, res: Response): Promise<any> => {
+router.get("/findMany", async (req: Request, res: Response) => {
   try {
     const surveyList = await prisma.survey.findMany();
     res.status(200).send({ surveyList });
@@ -43,7 +43,7 @@ router.get("/findMany", async (req: Request, res: Response): Promise<any> => {
 
 router.get(
   "/findOne/:id",
-  async (req: Request, res: Response): Promise<any> => {
+  async (req: Request, res: Response)  => {
     try {
       const survey = await prisma.survey.findUnique({
         where: {
