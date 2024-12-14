@@ -1,4 +1,4 @@
-import { fetchAccount, Field, PublicKey } from 'o1js';
+import { fetchAccount, Field, Nullifier, PublicKey } from 'o1js';
 
 import type {
   ZkappWorkerRequest,
@@ -51,8 +51,8 @@ export default class ZkappWorkerClient {
     return await this._call('createSurveyTransaction', {survey});
   }
 
-   async createAnswerTransaction(answer: AnswerType,publicKeyBase58: string) {
-    return await this._call('createAnswerTransaction', {answer,publicKeyBase58});
+   async createAnswerTransaction(answer: AnswerType,publicKeyBase58: string,nullifier:Nullifier) {
+    return await this._call('createAnswerTransaction', {answer,publicKeyBase58,nullifier});
   }
   // worker initialization
 

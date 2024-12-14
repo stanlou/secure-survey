@@ -15,6 +15,16 @@ router.post("/save", async (req: Request, res: Response)  => {
           }
         }
       },
+      select:{
+        id:true,
+        data:true,
+        survey:{
+          select:{
+            data:true,
+            id:true
+          }
+        }
+      }
     }); 
 
     res.status(201).json({ message: "Answer saved successfully", createAnswer });
@@ -30,6 +40,16 @@ router.get("/findOne/:id", async (req: Request, res: Response) => {
     const answer = await prisma.answer.findUnique({
       where:{
         id: req.params.id,
+      },
+      select:{
+        id:true,
+        data:true,
+        survey:{
+          select:{
+            data:true,
+            id:true
+          }
+        }
       }
     }); 
     if (answer) {
@@ -43,7 +63,18 @@ router.get("/findOne/:id", async (req: Request, res: Response) => {
 });
 router.get("/findMany", async (req: Request, res: Response) => {
   try {
-    const answerList = await prisma.answer.findMany();
+    const answerList = await prisma.answer.findMany({
+      select:{
+        id:true,
+        data:true,
+        survey:{
+          select:{
+            data:true,
+            id:true
+          }
+        }
+      }
+    });
     res.status(200).send({ answerList });
   } catch (error) {
     console.error("Error fetching answer  list:", error);

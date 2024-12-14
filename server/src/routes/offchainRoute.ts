@@ -8,7 +8,18 @@ router.get("/getAll", async (req: Request, res: Response) => {
     const [nullifierList,surveyList,answerList] = await Promise.all([
         prisma.nullifier.findMany(),
         prisma.survey.findMany(),
-        prisma.answer.findMany()
+        prisma.answer.findMany({
+          select:{
+            id:true,
+            data:true,
+            survey:{
+              select:{
+                data:true,
+                id:true
+              }
+            }
+          }
+        })
     ])
 
     res.status(200).send({ nullifierList,surveyList,answerList });

@@ -3,9 +3,12 @@ import {
   Bool,
   Field,
   MerkleMap,
+  MerkleMapWitness,
   Mina,
+  Nullifier,
   Poseidon,
   PrivateKey,
+  Provable,
   PublicKey,
 } from 'o1js';
 import { Answer, Survey, SurveyContract } from './Survey';
@@ -106,12 +109,12 @@ describe('Survey', () => {
   ];
   const testAnswers = [
     [
-      createAnswerStruct("1n", plainAnswerData, "1n"),
-      createAnswerStruct("3n", plainAnswerData, "1n"),
+      createAnswerStruct("1n", plainAnswerData, testSurveys[0]),
+      createAnswerStruct("3n", plainAnswerData,  testSurveys[0]),
     ],
-    [createAnswerStruct("2n", plainAnswerData, "2n")],
+    [createAnswerStruct("2n", plainAnswerData, testSurveys[1])],
   ];
-  const fakeSurveyId = "100n";
+  const fakeSurveyId  =createSurveyStruct("100n", plainSurveyData);
   beforeAll(async () => {
     if (proofsEnabled) {
       await SurveyContract.compile();
@@ -228,28 +231,26 @@ describe('Survey', () => {
     answererPrivateKey: PrivateKey
   ) => {
     const answerWitness = answerMerkleMap.getWitness(answer.dbId);
-    const surveyWitness = surveyMerkleMap.getWitness(answer.surveyDbId);
-    const answeredSurveyData = surveyMerkleMap.get(answer.surveyDbId);
-    const nullifierKey = Poseidon.hash(
-      answererPublicKey.toFields().concat([answer.surveyDbId])
+    const surveyWitness = surveyMerkleMap.getWitness(answer.survey.dbId);
+     const nullifierKey = Poseidon.hash(
+      answererPublicKey.toFields().concat([answer.survey.dbId])
+    );
+    let jsonNullifier = Nullifier.fromJSON(Nullifier.createTestNullifier([nullifierKey],answererPrivateKey))
+
+    const nullifierWitness = Provable.witness(MerkleMapWitness, () =>
+      nullifierMerkleMap.getWitness(jsonNullifier.key())
     );
 
-    const nullifierWitness = nullifierMerkleMap.getWitness(nullifierKey);
-
-    const survey = new Survey({
-      dbId: answer.surveyDbId,
-      data: answeredSurveyData,
-    });
     const createAnswerTx = await Mina.transaction(
       answererPublicKey,
       async () => {
         await zkApp.saveAnswer(
           answer,
-          survey,
           answerWitness,
           surveyWitness,
           answererPublicKey,
-          nullifierWitness,
+          jsonNullifier,
+          nullifierWitness
         );
       }
     );
@@ -258,7 +259,7 @@ describe('Survey', () => {
     const pendingSaveTx = await createAnswerTx.send();
     await pendingSaveTx.wait();
     answerMerkleMap.set(answer.dbId, answer.hash());
-    nullifierMerkleMap.set(nullifierKey, Field(1));
+    nullifierMerkleMap.set(jsonNullifier.key(), Field(1));
   };
   it('create a new answer', async () => {
     await deploy();
@@ -324,7 +325,7 @@ describe('Survey', () => {
       const emptyAnswer = new Answer({
         dbId: Poseidon.hash([Field(1n)]),
         data: Field(0),
-        surveyDbId: Field(1n),
+        survey: testSurveys[0],
       });
       await createAnswer(emptyAnswer, senderPublicKey, senderPrivateKey);
     } catch {
@@ -332,18 +333,7 @@ describe('Survey', () => {
     }
     expect(valid).toBeFalsy();
   });
-  it('answer empty survey', async () => {
-    let valid = true;
-    try {
-      await deploy();
-      await createSurvey(testSurveys[0]);
-      const answerEmptySurvey = createAnswerStruct("0n", plainAnswerData, "0n");
-      await createAnswer(answerEmptySurvey, senderPublicKey, senderPrivateKey);
-    } catch {
-      valid = false;
-    }
-    expect(valid).toBeFalsy();
-  });
+
   it('overwrite a created answer', async () => {
     let valid = true;
     try {

@@ -14,14 +14,13 @@ export const createSurveyStruct = (dbId: string, surveyData: string) => {
 export const createAnswerStruct = (
   dbId: string,
   answerData: string,
-  surveyId: string
+  survey: Survey
 ) => {
   const hashedAnswerId = Poseidon.hash(jsonToFields(dbId));
-  const hashedSurveyId = Poseidon.hash(jsonToFields(surveyId));
   const hashedAnswerData = Poseidon.hash(jsonToFields(answerData));
   return new Answer({
     dbId: hashedAnswerId,
     data: hashedAnswerData,
-    surveyDbId: hashedSurveyId,
+    survey
   });
 };

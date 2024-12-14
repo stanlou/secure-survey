@@ -6,7 +6,7 @@ export interface SurveyType  {
 export type AnswerType = {
     id: string
     data: object
-    surveyId: string
+    survey: SurveyType
 }
 export type AnswerCreateInput = {
     data: object
