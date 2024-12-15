@@ -16,3 +16,19 @@ export type NullifierType = {
     key: string
 }
 
+export type Group = {
+    x: Field;
+    y: Field;
+};
+export type NullifierJson = {
+    publicKey: Group;
+    public: {
+        nullifier: Group;
+        s: Field;
+    };
+    private: {
+        c: Field;
+        g_r: Group;
+        h_m_pk_r: Group;
+    };
+};

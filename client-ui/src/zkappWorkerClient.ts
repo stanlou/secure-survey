@@ -51,8 +51,8 @@ export default class ZkappWorkerClient {
     return await this._call('createSurveyTransaction', {survey});
   }
 
-   async createAnswerTransaction(answer: AnswerType,publicKeyBase58: string,nullifier:Nullifier) {
-    return await this._call('createAnswerTransaction', {answer,publicKeyBase58,nullifier});
+   async createAnswerTransaction(answer: AnswerType,publicKeyBase58: string,jsonNullifier:Nullifier) {
+    return await this._call('createAnswerTransaction', {answer,publicKeyBase58,jsonNullifier});
   }
   // worker initialization
 

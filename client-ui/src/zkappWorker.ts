@@ -17,7 +17,7 @@ import {
   createSurveyStruct,
   createAnswerStruct,
 } from "secure-survey";
-import { AnswerType, NullifierType, SurveyType } from "./types";
+import { AnswerType, NullifierJson, NullifierType, SurveyType } from "./types";
 
 const API_Base_URL = import.meta.env.VITE_API_URL;
 
@@ -134,7 +134,7 @@ const functions = {
   createAnswerTransaction: async (args: {
     answer: AnswerType;
     publicKeyBase58: string;
-    nullifier:Nullifier
+    jsonNullifier:NullifierJson
   }) => {
     const surveyStruct = createSurveyStruct(args.answer.survey.id,JSON.stringify(args.answer.survey.data))
     const answerStruct = createAnswerStruct(
@@ -152,9 +152,10 @@ const functions = {
     });
     
     const answererPublicKey = PublicKey.fromBase58(args.publicKeyBase58);
-    
+    const nullifier = Nullifier.fromJSON(args.jsonNullifier)
+
     const nullifierWitness = Provable.witness(MerkleMapWitness, () =>
-      state.offChainStorage!.nullifierMerkleMap.getWitness(args.nullifier.key())
+      state.offChainStorage!.nullifierMerkleMap.getWitness(nullifier.key())
     );
 
    
@@ -164,7 +165,7 @@ const functions = {
         answerWitness,
         surveyWitness,
         answererPublicKey,
-        args.nullifier,
+        nullifier,
         nullifierWitness,
         
       );

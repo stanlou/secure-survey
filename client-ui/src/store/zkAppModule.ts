@@ -19,7 +19,7 @@ declare global {
     mina?: MinaWallet;
   }
 }
-const ZKAPP_ADDRESS = "B62qng3DckFGVnkr6WGwAxsMx4UqizCZWWxJuQy7WrsRsG9narwvfuC";
+const ZKAPP_ADDRESS = "B62qnoqVwzVdCduoh1R7xYof7zPyCMsFbkUdKMC8mT4pMhcop7fEbJp";
 const TRANSACTION_FEE = 0.1;
 export const useZkAppStore = defineStore("useZkAppModule", {
   state: () => ({
@@ -141,15 +141,14 @@ export const useZkAppStore = defineStore("useZkAppModule", {
 
 
         this.stepDisplay = "Creating a nullifier...";
-        const nullifier = await (window as any).mina.createNullifier({
+        const jsonNullifier = await (window as any).mina.createNullifier({
           message: [nullifierKey]
         })
-        console.log(nullifier) 
-        await axios.post(API_URL+"/nullifier/save",{key:Nullifier.fromJSON(nullifier).key()});
+        await axios.post(API_URL+"/nullifier/save",{key:Nullifier.fromJSON(jsonNullifier).key()});
 
         this.stepDisplay = "Creating a transaction...";
 
-        await this.zkappWorkerClient!.createAnswerTransaction(answer,this.publicKeyBase58,nullifier);
+        await this.zkappWorkerClient!.createAnswerTransaction(answer,this.publicKeyBase58,jsonNullifier);
 
         this.stepDisplay = "Creating proof...";
         await this.zkappWorkerClient!.proveTransaction();
