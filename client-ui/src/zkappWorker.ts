@@ -4,20 +4,20 @@ import {
   fetchAccount,
   Field,
   MerkleMap,
-  Poseidon,
+  Nullifier,
+  Provable,
+  MerkleMapWitness,
 } from "o1js";
 
 import axios from "axios";
 type Transaction = Awaited<ReturnType<typeof Mina.transaction>>;
 import {
   SurveyContract,
-  Answer,
   Survey,
   createSurveyStruct,
   createAnswerStruct,
 } from "secure-survey";
-import { createNullifier } from "./helper/nullifier";
-import { AnswerType, NullifierType, SurveyType } from "./types";
+import { AnswerType, NullifierJson, NullifierType, SurveyType } from "./types";
 
 const API_Base_URL = import.meta.env.VITE_API_URL;
 
@@ -62,11 +62,12 @@ class OffChainStorage {
       this.surveyMerkleMap.set(survey.dbId, survey.hash());
     });
     this.answerCount = answerList?.length;
-    answerList.map((e: AnswerType) => {
-      const id = e.id;
-      const data = JSON.stringify(e.data);
-      const surveyId = e.surveyId;
-      const answer = createAnswerStruct(id, data, surveyId);
+    answerList.map((answerJson: AnswerType) => {
+      const id = answerJson.id;
+      const data = JSON.stringify(answerJson.data);
+      const survey = createSurveyStruct(answerJson.survey.id, JSON.stringify(answerJson.survey.data));
+
+      const answer = createAnswerStruct(id, data, survey);
       this.answerMerkleMap.set(answer.dbId, answer.hash());
     });
     nullifierList.map((e: NullifierType) => {
@@ -133,40 +134,40 @@ const functions = {
   createAnswerTransaction: async (args: {
     answer: AnswerType;
     publicKeyBase58: string;
+    jsonNullifier:NullifierJson
   }) => {
+    const surveyStruct = createSurveyStruct(args.answer.survey.id,JSON.stringify(args.answer.survey.data))
     const answerStruct = createAnswerStruct(
       args.answer.id,
       JSON.stringify(args.answer.data),
-      args.answer.surveyId
+      surveyStruct
     );
 
     const surveyWitness = await functions.createSurveyWitness({
-      surveyId: answerStruct.surveyDbId,
+      surveyId: answerStruct.survey.dbId,
     });
 
     const answerWitness = await functions.createAnswerWitness({
       answerId: answerStruct.dbId,
     });
-    const answeredSurveyData = state.offChainStorage!.surveyMerkleMap.get(
-      answerStruct.surveyDbId
-    );
+    
     const answererPublicKey = PublicKey.fromBase58(args.publicKeyBase58);
-    const nullifierKey = createNullifier(args.publicKeyBase58, args.answer);
-    const nullifierWitness =
-      state.offChainStorage!.nullifierMerkleMap.getWitness(Field(nullifierKey));
+    const nullifier = Nullifier.fromJSON(args.jsonNullifier)
 
-    const survey = new Survey({
-      dbId: answerStruct.surveyDbId,
-      data: answeredSurveyData,
-    });
+    const nullifierWitness = Provable.witness(MerkleMapWitness, () =>
+      state.offChainStorage!.nullifierMerkleMap.getWitness(nullifier.key())
+    );
+
+   
     state.transaction = await Mina.transaction(answererPublicKey, async () => {
       await state.zkappInstance!.saveAnswer(
         answerStruct,
-        survey,
         answerWitness,
         surveyWitness,
         answererPublicKey,
-        nullifierWitness
+        nullifier,
+        nullifierWitness,
+        
       );
     });
     state.transaction!.send();

@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import ZkappWorkerClient from "../zkappWorkerClient";
 import axios from "axios";
 import { API_URL } from "../webService/apiService";
-import { Field, Poseidon, PublicKey } from "o1js";
+import { Field, Nullifier, Poseidon, PublicKey } from "o1js";
 import { createAnswerStruct } from "secure-survey";
 import { createNullifier } from "../helper/nullifier";
 import { AnswerType, SurveyType } from "../types";
@@ -19,7 +19,7 @@ declare global {
     mina?: MinaWallet;
   }
 }
-const ZKAPP_ADDRESS = "B62qng3DckFGVnkr6WGwAxsMx4UqizCZWWxJuQy7WrsRsG9narwvfuC";
+const ZKAPP_ADDRESS = "B62qnoqVwzVdCduoh1R7xYof7zPyCMsFbkUdKMC8mT4pMhcop7fEbJp";
 const TRANSACTION_FEE = 0.1;
 export const useZkAppStore = defineStore("useZkAppModule", {
   state: () => ({
@@ -55,7 +55,7 @@ export const useZkAppStore = defineStore("useZkAppModule", {
             this.publicKeyBase58
           );
           this.accountExists = res.error === null;
-          
+
           await this.zkappWorkerClient.loadContract();
 
           this.stepDisplay = "Compiling zkApp...";
@@ -139,12 +139,16 @@ export const useZkAppStore = defineStore("useZkAppModule", {
         this.stepDisplay = "Creating a nullifier"
         const nullifierKey = createNullifier(this.publicKeyBase58,answer)
 
-        /// FIX THAT HARCODED 
-        await axios.post(API_URL+"/nullifier/save",{key:nullifierKey});
+
+        this.stepDisplay = "Creating a nullifier...";
+        const jsonNullifier = await (window as any).mina.createNullifier({
+          message: [nullifierKey]
+        })
+        await axios.post(API_URL+"/nullifier/save",{key:Nullifier.fromJSON(jsonNullifier).key()});
 
         this.stepDisplay = "Creating a transaction...";
 
-        await this.zkappWorkerClient!.createAnswerTransaction(answer,this.publicKeyBase58);
+        await this.zkappWorkerClient!.createAnswerTransaction(answer,this.publicKeyBase58,jsonNullifier);
 
         this.stepDisplay = "Creating proof...";
         await this.zkappWorkerClient!.proveTransaction();
