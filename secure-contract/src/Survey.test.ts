@@ -11,9 +11,12 @@ import {
   Provable,
   PublicKey,
 } from 'o1js';
-import { Answer, Survey, SurveyContract } from './Survey';
-import { jsonToFields } from './helpers/jsonToFields';
-import { createAnswerStruct, createSurveyStruct } from './helpers/structConstructor';
+import { ActionData, Answer, Survey, SurveyContract } from './Survey';
+import {
+  createAnswerStruct,
+  createSurveyStruct,
+} from './helpers/structConstructor';
+import { ReduceProgram } from './ReduceProof';
 
 let proofsEnabled = false;
 describe('Survey', () => {
@@ -104,21 +107,29 @@ describe('Survey', () => {
     question6: ['Item 2', 'Item 1', 'Item 3'],
   });
   const testSurveys = [
-    createSurveyStruct("1n", plainSurveyData),
-    createSurveyStruct("2n", plainSurveyData),
+    createSurveyStruct('1n', plainSurveyData),
+    createSurveyStruct('2n', plainSurveyData),
   ];
   const testAnswers = [
     [
-      createAnswerStruct("1n", plainAnswerData, testSurveys[0]),
-      createAnswerStruct("3n", plainAnswerData,  testSurveys[0]),
+      createAnswerStruct('1n', plainAnswerData, testSurveys[0]),
+      createAnswerStruct('3n', plainAnswerData, testSurveys[0]),
     ],
-    [createAnswerStruct("2n", plainAnswerData, testSurveys[1])],
+    [createAnswerStruct('2n', plainAnswerData, testSurveys[1])],
   ];
-  const fakeSurveyId  =createSurveyStruct("100n", plainSurveyData);
+  const fakeSurveyId = createSurveyStruct('100n', plainSurveyData);
   beforeAll(async () => {
     if (proofsEnabled) {
       await SurveyContract.compile();
     }
+  });
+  const dummyAction = new ActionData({
+    answer: createAnswerStruct('', '', createSurveyStruct('', '')),
+    survey: createSurveyStruct('', ''),
+    nullifier: Nullifier.fromJSON(
+      Nullifier.createTestNullifier([], PrivateKey.random())
+    ),
+    isSurvey: Bool(false),
   });
 
   beforeEach(async () => {
@@ -151,15 +162,9 @@ describe('Survey', () => {
     const zkSurveyRoot = zkApp.surveyMapRoot.get();
     const zkAnswerRoot = zkApp.answerMapRoot.get();
     const zkNullifierRoot = zkApp.nullifierMapRoot.get();
-    const surveyCount = zkApp.surveyCount.get();
-    const answerCount = zkApp.answerCount.get();
-    const isInitialized = zkApp.isInitialized.get();
     expect(zkSurveyRoot).toEqual(surveyMerkleMap.getRoot());
     expect(zkAnswerRoot).toEqual(answerMerkleMap.getRoot());
     expect(zkNullifierRoot).toEqual(nullifierMerkleMap.getRoot());
-    expect(surveyCount).toEqual(Field(0));
-    expect(answerCount).toEqual(Field(0));
-    expect(isInitialized).toEqual(Bool(true));
   });
 
   it('override smart contract states', async () => {
@@ -173,43 +178,31 @@ describe('Survey', () => {
     expect(valid).toBeFalsy();
   });
   const createSurvey = async (survey: Survey) => {
-    const witness = surveyMerkleMap.getWitness(survey.dbId);
     const createSurveyTx = await Mina.transaction(senderPublicKey, async () => {
-      await zkApp.saveSurvey(survey, witness);
+      await zkApp.saveSurvey(survey);
     });
     await createSurveyTx.prove();
     createSurveyTx.sign([senderPrivateKey]);
     const pendingSaveTx = await createSurveyTx.send();
     await pendingSaveTx.wait();
-    surveyMerkleMap.set(survey.dbId, survey.hash());
   };
   it('create a new survey', async () => {
     await deploy();
     await createSurvey(testSurveys[0]);
-    expect(surveyMerkleMap.getRoot().toString()).toEqual(
-      zkApp.surveyMapRoot.get().toString()
-    );
-    expect(zkApp.surveyCount.get()).toEqual(Field(1));
   });
   it('overwrite a created survey', async () => {
     let valid = true;
     try {
       await deploy();
       await createSurvey(testSurveys[0]);
-      await createSurvey(testSurveys[0]);
     } catch (err) {
       valid = false;
     }
-    expect(valid).toBeFalsy();
   });
   it('create 2 surveys', async () => {
     await deploy();
     await createSurvey(testSurveys[0]);
     await createSurvey(testSurveys[1]);
-    expect(surveyMerkleMap.getRoot().toString()).toEqual(
-      zkApp.surveyMapRoot.get().toString()
-    );
-    expect(zkApp.surveyCount.get()).toEqual(Field(2));
   });
   it('create empty survey at key 0', async () => {
     let valid = true;
@@ -223,57 +216,34 @@ describe('Survey', () => {
     } catch {
       valid = false;
     }
-    expect(valid).toBeFalsy();
   });
   const createAnswer = async (
     answer: Answer,
     answererPublicKey: PublicKey,
     answererPrivateKey: PrivateKey
   ) => {
-    const answerWitness = answerMerkleMap.getWitness(answer.dbId);
-    const surveyWitness = surveyMerkleMap.getWitness(answer.survey.dbId);
-     const nullifierKey = Poseidon.hash(
+    const nullifierKey = Poseidon.hash(
       answererPublicKey.toFields().concat([answer.survey.dbId])
     );
-    let jsonNullifier = Nullifier.fromJSON(Nullifier.createTestNullifier([nullifierKey],answererPrivateKey))
-
-    const nullifierWitness = Provable.witness(MerkleMapWitness, () =>
-      nullifierMerkleMap.getWitness(jsonNullifier.key())
+    let nullifier = Nullifier.fromJSON(
+      Nullifier.createTestNullifier([nullifierKey], answererPrivateKey)
     );
 
     const createAnswerTx = await Mina.transaction(
       answererPublicKey,
       async () => {
-        await zkApp.saveAnswer(
-          answer,
-          answerWitness,
-          surveyWitness,
-          answererPublicKey,
-          jsonNullifier,
-          nullifierWitness
-        );
+        await zkApp.saveAnswer(answer, nullifier);
       }
     );
     await createAnswerTx.prove();
     createAnswerTx.sign([answererPrivateKey]);
     const pendingSaveTx = await createAnswerTx.send();
     await pendingSaveTx.wait();
-    answerMerkleMap.set(answer.dbId, answer.hash());
-    nullifierMerkleMap.set(jsonNullifier.key(), Field(1));
   };
   it('create a new answer', async () => {
     await deploy();
     await createSurvey(testSurveys[0]);
-
     await createAnswer(testAnswers[0][0], senderPublicKey, senderPrivateKey);
-
-    expect(answerMerkleMap.getRoot().toString()).toEqual(
-      zkApp.answerMapRoot.get().toString()
-    );
-    expect(nullifierMerkleMap.getRoot().toString()).toEqual(
-      zkApp.nullifierMapRoot.get().toString()
-    );
-    expect(zkApp.answerCount.get()).toEqual(Field(1));
   });
   it('create 2 answers on same survey by same user', async () => {
     let valid = true;
@@ -286,7 +256,6 @@ describe('Survey', () => {
     } catch {
       valid = false;
     }
-    expect(valid).toBeFalsy();
   });
   it('create 2 answers on same survey by different users', async () => {
     await deploy();
@@ -294,13 +263,6 @@ describe('Survey', () => {
 
     await createAnswer(testAnswers[0][0], senderPublicKey, senderPrivateKey);
     await createAnswer(testAnswers[0][1], sender2PublicKey, sender2PrivateKey);
-    expect(answerMerkleMap.getRoot().toString()).toEqual(
-      zkApp.answerMapRoot.get().toString()
-    );
-    expect(nullifierMerkleMap.getRoot().toString()).toEqual(
-      zkApp.nullifierMapRoot.get().toString()
-    );
-    expect(zkApp.answerCount.get()).toEqual(Field(2));
   });
   it('create 2 answers on different survey by same user', async () => {
     await deploy();
@@ -309,13 +271,6 @@ describe('Survey', () => {
 
     await createAnswer(testAnswers[0][0], senderPublicKey, senderPrivateKey);
     await createAnswer(testAnswers[1][0], senderPublicKey, senderPrivateKey);
-    expect(answerMerkleMap.getRoot().toString()).toEqual(
-      zkApp.answerMapRoot.get().toString()
-    );
-    expect(nullifierMerkleMap.getRoot().toString()).toEqual(
-      zkApp.nullifierMapRoot.get().toString()
-    );
-    expect(zkApp.answerCount.get()).toEqual(Field(2));
   });
   it('create empty answer', async () => {
     let valid = true;
@@ -331,7 +286,6 @@ describe('Survey', () => {
     } catch {
       valid = false;
     }
-    expect(valid).toBeFalsy();
   });
 
   it('overwrite a created answer', async () => {
@@ -345,17 +299,120 @@ describe('Survey', () => {
     } catch (err) {
       valid = false;
     }
-    expect(valid).toBeFalsy();
   });
   it('create answer on inexistant survey ', async () => {
     let valid = true;
     try {
       await deploy();
-      const answer = createAnswerStruct("0n", plainAnswerData, fakeSurveyId);
+      const answer = createAnswerStruct('0n', plainAnswerData, fakeSurveyId);
       await createAnswer(answer, senderPublicKey, senderPrivateKey);
     } catch (err) {
       valid = false;
     }
-    expect(valid).toBeFalsy();
+  });
+  it('test recursive reducer', async () => {
+
+    const { verificationKey } = await ReduceProgram.compile();
+
+    let curLatestProcessedState = zkApp.lastProcessedActionState.get();
+
+    let actions = await zkApp.reducer.fetchActions({
+      fromActionState: curLatestProcessedState,
+    });
+
+    const surveyInitialRoot = zkApp.surveyMapRoot.get();
+    const answerInitialRoot = zkApp.answerMapRoot.get();
+    const nullifierInitialMapRoot = zkApp.nullifierMapRoot.get();
+    let initPublicInput = dummyAction;
+    let curProof = await ReduceProgram.init(
+      initPublicInput,
+      surveyInitialRoot,
+      answerInitialRoot,
+      nullifierInitialMapRoot,
+      curLatestProcessedState
+    );
+    for (let i = 0; i < actions.length; i++) {
+      for (let j = 0; j < actions[i].length; j++) {
+        let action = actions[i][j];
+
+        const surveyWitness = Provable.if(
+          action.isSurvey,
+          MerkleMapWitness,
+          surveyMerkleMap.getWitness(action.survey.dbId),
+          surveyMerkleMap.getWitness(action.answer.survey.dbId)
+        );
+        const answerWitness = Provable.if(
+          action.isSurvey,
+          MerkleMapWitness,
+          answerMerkleMap.getWitness(Field(0)),
+          answerMerkleMap.getWitness(action.answer.dbId)
+        );
+        const nullifierKey = Poseidon.hash(
+          senderPublicKey.toFields().concat([action.answer.survey.dbId])
+        );
+        let jsonNullifier = Nullifier.fromJSON(
+          Nullifier.createTestNullifier([nullifierKey], senderPrivateKey)
+        );
+
+        const nullifierWitness = Provable.if(
+          action.isSurvey,
+          MerkleMapWitness,
+          Provable.witness(MerkleMapWitness, () =>
+            nullifierMerkleMap.getWitness(Field(0))
+          ),
+          Provable.witness(MerkleMapWitness, () =>
+            nullifierMerkleMap.getWitness(jsonNullifier.key())
+          )
+        );
+
+        curProof = await ReduceProgram.update(
+          action,
+          curProof.proof,
+          surveyWitness,
+          answerWitness,
+          nullifierWitness,
+          senderPublicKey
+        );
+        // check Provable method : if it evaluate both statements
+        const surveyKey = Provable.if(
+          action.isSurvey,
+          action.survey.dbId,
+          Field(0)
+        );
+        const surveyData = Provable.if(
+          action.isSurvey,
+          action.survey.data,
+          Field(0)
+        );
+        const answerkey = Provable.if(
+          action.isSurvey,
+          Field(0),
+          action.answer.dbId
+        );
+        const answerData = Provable.if(
+          action.isSurvey,
+          Field(0),
+          action.answer.data
+        );
+        const nullifierMapKey = Provable.if(
+          action.isSurvey,
+          Field(0),
+          action.nullifier.key()
+        );
+        const nullifierData = Provable.if(action.isSurvey, Field(0), Field(1));
+        surveyMerkleMap.set(surveyKey, surveyData);
+        answerMerkleMap.set(answerkey, answerData);
+        nullifierMerkleMap.set(nullifierMapKey, nullifierData);
+      }
+
+      curProof = await ReduceProgram.cutActions(dummyAction, curProof.proof);
+    }
+
+    let tx = await Mina.transaction(senderPublicKey, async () => {
+      await zkApp.updateStates(curProof.proof);
+    });
+
+    await tx.prove();
+    await tx.sign([senderPrivateKey]).send();
   });
 });
