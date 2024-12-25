@@ -76,10 +76,10 @@ function emptyHashWithPrefix(prefix: string) {
   return salt(prefix)[0];
 }
 
-export const actionListAdd = (hash: Field, action: Field): Field => {
+export const actionListAdd = (hash: Field, action: ActionData): Field => {
   return Poseidon.hashWithPrefix('MinaZkappSeqEvents**', [
     hash,
-    Poseidon.hashWithPrefix('MinaZkappEvent******', [action]),
+    Poseidon.hashWithPrefix('MinaZkappEvent******', ActionData.toFields(action)),
   ]);
 };
 export const merkleActionsAdd = (hash: Field, actionsHash: Field): Field => {
@@ -156,7 +156,6 @@ function reduceAnswers(
   surveyWitness: MerkleMapWitness,
   answerWitness: MerkleMapWitness,
   nullifierWitness: MerkleMapWitness,
-  answererPublicKey: PublicKey,
   newActionSubListState:Field
 ) {
   const validAnswerData = input.content.answerData.equals(
@@ -192,11 +191,13 @@ function reduceAnswers(
   const validSurveyId = currentSurveyKey.equals(survey.dbId);
 
   // Check for duplicate submissions (nullifier check)
+
   const nullifierKey = Poseidon.hash(
-    answererPublicKey.toFields().concat([survey.dbId])
-  );
-  // verify the nullifier
+  input.nullifier.getPublicKey().toFields().concat([survey.dbId])
+);
+
   input.nullifier.verify([nullifierKey]);
+
 
   input.nullifier.assertUnused(
     nullifierWitness,
@@ -204,6 +205,7 @@ function reduceAnswers(
   );
 
   const nullifierRootAfter = input.nullifier.setUsed(nullifierWitness);
+
   const validChecks = validAnswerData
   .and(validAnswerCommitment)
   .and(validAnswerkeyCommitment)
@@ -255,13 +257,12 @@ export async function update(
   surveyWitness: MerkleMapWitness,
   answerWitness: MerkleMapWitness,
   nullifierWitness: MerkleMapWitness,
-  answererPublicKey: PublicKey
 ): Promise<{ publicOutput: ReducePublicOutput }> {
   prevProof.verify();
 
   let newActionSubListState = actionListAdd(
     prevProof.publicOutput.actionSubListState,
-    input.hash()
+    input
   );
   const newPublicOutput = Provable.if(
     input.isSurvey,
@@ -273,7 +274,7 @@ export async function update(
       surveyWitness,
       answerWitness,
       nullifierWitness,
-      answererPublicKey,newActionSubListState
+      newActionSubListState
     )
   );
   newPublicOutput.isValid.assertEquals(true)
@@ -332,7 +333,6 @@ export const ReduceProgram = ZkProgram({
         MerkleMapWitness,
         MerkleMapWitness,
         MerkleMapWitness,
-        PublicKey,
       ],
       async method(
         input: ActionData,
@@ -340,7 +340,6 @@ export const ReduceProgram = ZkProgram({
         surveyWitness: MerkleMapWitness,
         answerWitness: MerkleMapWitness,
         nullifierWitness: MerkleMapWitness,
-        answererPublicKey: PublicKey
       ) {
         return update(
           input,
@@ -348,7 +347,6 @@ export const ReduceProgram = ZkProgram({
           surveyWitness,
           answerWitness,
           nullifierWitness,
-          answererPublicKey
         );
       },
     },

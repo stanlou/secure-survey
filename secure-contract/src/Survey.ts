@@ -5,6 +5,7 @@ import {
   method,
   Nullifier,
   Poseidon,
+  Provable,
   Reducer,
   SmartContract,
   State,
@@ -47,6 +48,7 @@ export class SurveyContract extends SmartContract {
     this.surveyMapRoot.set(INITIAL_MERKLE_MAP_ROOT);
     this.answerMapRoot.set(INITIAL_MERKLE_MAP_ROOT);
     this.nullifierMapRoot.set(INITIAL_MERKLE_MAP_ROOT);
+    this.lastProcessedActionState.set(Reducer.initialActionState)
   }
 
   // Method to reinitialize the smart contract states , only used for development
@@ -74,15 +76,16 @@ export class SurveyContract extends SmartContract {
       isSurvey: Bool(true)
     });
     this.reducer.dispatch(dispatchedData);
+
   }
 
   // Method to save an answer to a survey
   @method async saveAnswer(answer: Answer, nullifier: Nullifier) {
     const dispatchContent = new DispatchData({
       answerDbId: answer.dbId,
-      surveyDbId: Field(0),
+      surveyDbId: answer.survey.dbId,
       answerData: answer.data,
-      surveyData: Field(0),
+      surveyData: answer.survey.data,
     });
     const dispatchedData = new ActionData({
       content:dispatchContent,
@@ -98,24 +101,26 @@ export class SurveyContract extends SmartContract {
 
   ) {
     reduceProof.verify();
-
     const lastProcessedActionState =
       this.lastProcessedActionState.getAndRequireEquals();
       const currentSurveyRoot = this.surveyMapRoot.getAndRequireEquals();
       const currentAnswerRoot = this.answerMapRoot.getAndRequireEquals();
       const currentNullifierRoot = this.nullifierMapRoot.getAndRequireEquals();
-  
+
     // Proof inputs check
     reduceProof.publicOutput.initialActionState.assertEquals(
       lastProcessedActionState
     );
+
+
     reduceProof.publicOutput.initialSurveyMapRoot.assertEquals(currentSurveyRoot);
     reduceProof.publicOutput.initialAnswerMapRoot.assertEquals(currentAnswerRoot);
     reduceProof.publicOutput.initialNullifierMapRoot.assertEquals(currentNullifierRoot);
 
-    this.account.actionState.requireEquals(
+
+      this.account.actionState.requireEquals(
       reduceProof.publicOutput.actionListState
-    );
+    );  
 
     this.surveyMapRoot.set(reduceProof.publicOutput.finalSurveyMapRoot);
     this.answerMapRoot.set(reduceProof.publicOutput.finalAnswerMapRoot);
