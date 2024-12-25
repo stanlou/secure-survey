@@ -10,8 +10,10 @@ import {
   Struct,
   ZkProgram,
 } from 'o1js';
+import { ActionData } from './structs/ActionData';
+import { Answer, Survey } from './Survey';
 
- class Survey extends Struct({
+/*  class Survey extends Struct({
   dbId: Field, // Identifier for the survey
   data: Field, // Content of the survey
 }) {
@@ -40,9 +42,7 @@ import {
     return Poseidon.hash(ActionData.toFields(this));
   }
 }
-
-
-
+ */
 
 // https://github.com/o1-labs/o1js-bindings/blob/71f2e698dadcdfc62c76a72248c0df71cfd39d4c/lib/binable.ts#L317
 let encoder = new TextEncoder();
@@ -88,6 +88,7 @@ export const merkleActionsAdd = (hash: Field, actionsHash: Field): Field => {
 
 export const emptyActionListHash = emptyHashWithPrefix('MinaZkappActionsEmpty');
 
+
 export class ReducePublicOutput extends Struct({
   initialSurveyMapRoot: Field,
   finalSurveyMapRoot: Field,
@@ -99,6 +100,133 @@ export class ReducePublicOutput extends Struct({
   actionSubListState: Field,
   actionListState: Field,
 }) {}
+
+
+class ReducerPublicOutputAndChecks extends Struct({
+  publicOutput: ReducePublicOutput,
+  isValid: Bool
+}) {}
+
+
+function reduceSurveys(
+  input: ActionData,
+  prevProof: SelfProof<ActionData, ReducePublicOutput>,
+  surveyWitness: MerkleMapWitness,
+  newActionSubListState:Field
+) {
+  // Ensure the survey data is valid
+  const validSurveyData = input.content.surveyData.equals(
+    Field(0),
+  ).not();
+  // Verify the witness and update the Merkle tree
+  const [rootBefore, key] = surveyWitness.computeRootAndKey(Field(0));
+  const surveyCommitment = rootBefore.equals(
+    prevProof.publicOutput.finalSurveyMapRoot,
+  );
+  const validSurveyKey = key.equals(
+    input.content.surveyDbId,
+  );
+  const survey = new Survey({
+    data: input.content.surveyData,
+    dbId: input.content.surveyDbId,
+  });
+  const validChecks = validSurveyData.and(surveyCommitment).and(validSurveyKey)
+  const [rootAfter, _] = surveyWitness.computeRootAndKey(survey.hash());
+
+  return new ReducerPublicOutputAndChecks({
+    isValid:validChecks,
+    publicOutput:{
+      initialSurveyMapRoot: prevProof.publicOutput.initialSurveyMapRoot,
+      initialAnswerMapRoot: prevProof.publicOutput.initialAnswerMapRoot,
+      initialNullifierMapRoot: prevProof.publicOutput.initialNullifierMapRoot,
+      finalAnswerMapRoot: prevProof.publicOutput.finalAnswerMapRoot,
+      finalNullifierMapRoot: prevProof.publicOutput.finalNullifierMapRoot,
+      finalSurveyMapRoot: rootAfter,
+      initialActionState: prevProof.publicOutput.initialActionState,
+      actionSubListState: newActionSubListState,
+      actionListState: prevProof.publicOutput.actionListState,
+  
+    }
+  });
+}
+
+function reduceAnswers(
+  input: ActionData,
+  prevProof: SelfProof<ActionData, ReducePublicOutput>,
+  surveyWitness: MerkleMapWitness,
+  answerWitness: MerkleMapWitness,
+  nullifierWitness: MerkleMapWitness,
+  answererPublicKey: PublicKey,
+  newActionSubListState:Field
+) {
+  const validAnswerData = input.content.answerData.equals(
+    Field(0),
+  ).not();
+
+  // Verify the answer Merkle tree witness
+  const [rootBefore, key] = answerWitness.computeRootAndKey(Field(0));
+  const validAnswerCommitment = rootBefore.equals(
+    prevProof.publicOutput.finalAnswerMapRoot,
+  );
+  
+  const validAnswerkeyCommitment = key.equals(
+    input.content.answerDbId,
+  );
+
+  const survey = new Survey({
+    data: input.content.surveyData,
+    dbId: input.content.surveyDbId,
+  });
+  const answer = new Answer({
+    dbId: input.content.answerDbId,
+    data: input.content.answerData,
+    survey,
+  });
+  // Verify the survey exists
+  const [currentSurveyRoot, currentSurveyKey] = surveyWitness.computeRootAndKey(
+    survey.hash()
+  );
+  const surveyExists = currentSurveyRoot.equals(
+    prevProof.publicOutput.finalSurveyMapRoot,
+  );
+  const validSurveyId = currentSurveyKey.equals(survey.dbId);
+
+  // Check for duplicate submissions (nullifier check)
+  const nullifierKey = Poseidon.hash(
+    answererPublicKey.toFields().concat([survey.dbId])
+  );
+  // verify the nullifier
+  input.nullifier.verify([nullifierKey]);
+
+  input.nullifier.assertUnused(
+    nullifierWitness,
+    prevProof.publicOutput.finalNullifierMapRoot
+  );
+
+  const nullifierRootAfter = input.nullifier.setUsed(nullifierWitness);
+  const validChecks = validAnswerData
+  .and(validAnswerCommitment)
+  .and(validAnswerkeyCommitment)
+  .and(surveyExists)
+  .and(validSurveyId);
+
+  const [rootAfter, _] = answerWitness.computeRootAndKey(answer.hash());
+  return new ReducerPublicOutputAndChecks({
+    publicOutput:{
+      initialSurveyMapRoot: prevProof.publicOutput.initialSurveyMapRoot,
+      initialAnswerMapRoot: prevProof.publicOutput.initialAnswerMapRoot,
+      initialNullifierMapRoot: prevProof.publicOutput.initialNullifierMapRoot,
+      finalAnswerMapRoot: rootAfter,
+      finalNullifierMapRoot: nullifierRootAfter,
+      finalSurveyMapRoot: prevProof.publicOutput.finalSurveyMapRoot,
+      initialActionState: prevProof.publicOutput.initialActionState,
+      actionSubListState: newActionSubListState,
+      actionListState: prevProof.publicOutput.actionListState,
+    },
+    isValid:validChecks
+  });
+}
+
 
 export async function init(
   surveyMapRoot: Field,
@@ -129,111 +257,28 @@ export async function update(
   nullifierWitness: MerkleMapWitness,
   answererPublicKey: PublicKey
 ): Promise<{ publicOutput: ReducePublicOutput }> {
-
   prevProof.verify();
 
   let newActionSubListState = actionListAdd(
     prevProof.publicOutput.actionSubListState,
     input.hash()
   );
-  // check provable.if assertions with @shigato-dev19
   const newPublicOutput = Provable.if(
     input.isSurvey,
-    ReducePublicOutput,
-    (() => {
-      // Ensure the survey data is valid
-      input.survey.data.assertNotEquals(
-        Field(0),
-        'Survey data must not be empty.'
-      );
-      // Verify the witness and update the Merkle tree
-      const [rootBefore, key] = surveyWitness.computeRootAndKey(Field(0));
-      rootBefore.assertEquals(
-        prevProof.publicOutput.finalSurveyMapRoot,
-        'Invalid Merkle tree witness.'
-      );
-      key.assertEquals(
-        input.survey.dbId,
-        'Survey ID does not match the witness key.'
-      );
-      const [rootAfter, _] = surveyWitness.computeRootAndKey(
-        input.survey.hash()
-      );
-
-      return new ReducePublicOutput({
-        initialSurveyMapRoot: prevProof.publicOutput.initialSurveyMapRoot,
-        initialAnswerMapRoot: prevProof.publicOutput.initialAnswerMapRoot,
-        initialNullifierMapRoot: prevProof.publicOutput.initialNullifierMapRoot,
-        finalAnswerMapRoot: prevProof.publicOutput.finalAnswerMapRoot,
-        finalNullifierMapRoot: prevProof.publicOutput.finalNullifierMapRoot,
-        finalSurveyMapRoot: rootAfter,
-        initialActionState: prevProof.publicOutput.initialActionState,
-        actionSubListState: newActionSubListState,
-        actionListState: prevProof.publicOutput.actionListState,
-      });
-    })(),
-    (() => {
-      input.answer.data.assertNotEquals(
-        Field(0),
-        'Answer data must not be empty.'
-      );
-
-      // Verify the answer Merkle tree witness
-      const [rootBefore, key] = answerWitness.computeRootAndKey(Field(0));
-      rootBefore.assertEquals(
-        prevProof.publicOutput.finalAnswerMapRoot,
-        'Invalid answer Merkle tree witness.'
-      );
-      key.assertEquals(
-        input.answer.dbId,
-        'Answer ID does not match the witness key.'
-      );
-
-      // Verify the survey exists
-      const [currentSurveyRoot, currentSurveyKey] =
-        surveyWitness.computeRootAndKey(input.answer.survey.hash());
-      currentSurveyRoot.assertEquals(
-        prevProof.publicOutput.finalSurveyMapRoot,
-        'Survey does not exist.'
-      );
-      currentSurveyKey.assertEquals(
-        input.answer.survey.dbId,
-        'Survey ID mismatch.'
-      );
-
-      // Check for duplicate submissions (nullifier check)
-      const nullifierKey = Poseidon.hash(
-        answererPublicKey.toFields().concat([input.answer.survey.dbId])
-      );
-      // verify the nullifier
-      input.nullifier.verify([nullifierKey]);
-
-      input.nullifier.assertUnused(
-        nullifierWitness,
-        prevProof.publicOutput.finalNullifierMapRoot
-      );
-
-      const nullifierRootAfter = input.nullifier.setUsed(nullifierWitness);
-
-      const [rootAfter, _] = answerWitness.computeRootAndKey(
-        input.answer.hash()
-      );
-      return new ReducePublicOutput({
-        initialSurveyMapRoot: prevProof.publicOutput.initialSurveyMapRoot,
-        initialAnswerMapRoot: prevProof.publicOutput.initialAnswerMapRoot,
-        initialNullifierMapRoot: prevProof.publicOutput.initialNullifierMapRoot,
-        finalAnswerMapRoot: rootAfter,
-        finalNullifierMapRoot: nullifierRootAfter,
-        finalSurveyMapRoot: prevProof.publicOutput.finalSurveyMapRoot,
-        initialActionState: prevProof.publicOutput.initialActionState,
-        actionSubListState: newActionSubListState,
-        actionListState: prevProof.publicOutput.actionListState,
-      });
-    })()
+    ReducerPublicOutputAndChecks,
+    reduceSurveys(input, prevProof, surveyWitness,newActionSubListState),
+    reduceAnswers(
+      input,
+      prevProof,
+      surveyWitness,
+      answerWitness,
+      nullifierWitness,
+      answererPublicKey,newActionSubListState
+    )
   );
-
+  newPublicOutput.isValid.assertEquals(true)
   return {
-    publicOutput: newPublicOutput,
+    publicOutput: newPublicOutput.publicOutput,
   };
 }
 
@@ -319,4 +364,5 @@ export const ReduceProgram = ZkProgram({
   },
 });
 
-export class ReduceProof extends ZkProgram.Proof(ReduceProgram) {}
+let ReduceProof_ = ZkProgram.Proof(ReduceProgram);
+export class ReduceProof extends ReduceProof_ {}

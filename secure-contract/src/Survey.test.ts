@@ -11,12 +11,13 @@ import {
   Provable,
   PublicKey,
 } from 'o1js';
-import { ActionData, Answer, Survey, SurveyContract } from './Survey';
+import {  Answer, Survey, SurveyContract } from './Survey';
 import {
   createAnswerStruct,
   createSurveyStruct,
 } from './helpers/structConstructor';
 import { ReduceProgram } from './ReduceProof';
+import { ActionData, DispatchData } from './structs/ActionData';
 
 let proofsEnabled = false;
 describe('Survey', () => {
@@ -123,14 +124,6 @@ describe('Survey', () => {
       await SurveyContract.compile();
     }
   });
-  const dummyAction = new ActionData({
-    answer: createAnswerStruct('', '', createSurveyStruct('', '')),
-    survey: createSurveyStruct('', ''),
-    nullifier: Nullifier.fromJSON(
-      Nullifier.createTestNullifier([], PrivateKey.random())
-    ),
-    isSurvey: Bool(false),
-  });
 
   beforeEach(async () => {
     const Local = await Mina.LocalBlockchain({ proofsEnabled });
@@ -147,6 +140,8 @@ describe('Survey', () => {
     surveyMerkleMap = new MerkleMap();
     answerMerkleMap = new MerkleMap();
     nullifierMerkleMap = new MerkleMap();
+    
+  
   });
   const deploy = async () => {
     const deployTx = await Mina.transaction(deployerAccount, async () => {
@@ -178,13 +173,14 @@ describe('Survey', () => {
     expect(valid).toBeFalsy();
   });
   const createSurvey = async (survey: Survey) => {
+    const nullifier = Nullifier.fromJSON(Nullifier.createTestNullifier([Field(0)],senderPrivateKey))
     const createSurveyTx = await Mina.transaction(senderPublicKey, async () => {
-      await zkApp.saveSurvey(survey);
+      await zkApp.saveSurvey(survey,nullifier);
     });
     await createSurveyTx.prove();
     createSurveyTx.sign([senderPrivateKey]);
     const pendingSaveTx = await createSurveyTx.send();
-    await pendingSaveTx.wait();
+    await pendingSaveTx.wait();0
   };
   it('create a new survey', async () => {
     await deploy();
@@ -213,7 +209,7 @@ describe('Survey', () => {
     try {
       await deploy();
       await createSurvey(emptySurvey);
-    } catch {
+    } catch {0
       valid = false;
     }
   });
@@ -310,7 +306,7 @@ describe('Survey', () => {
       valid = false;
     }
   });
-  it('test recursive reducer', async () => {
+   it('test recursive reducer', async () => {
 
     const { verificationKey } = await ReduceProgram.compile();
 
@@ -319,7 +315,16 @@ describe('Survey', () => {
     let actions = await zkApp.reducer.fetchActions({
       fromActionState: curLatestProcessedState,
     });
-
+    const dummyAction = new ActionData({
+      content: new DispatchData({
+        answerData:Field(0),
+        answerDbId:Field(0),
+        surveyData:Field(0),
+        surveyDbId:Field(0),
+      }),
+      nullifier: Nullifier.fromJSON(Nullifier.createTestNullifier([],senderPrivateKey)),
+      isSurvey:Bool(false)
+    }); 
     const surveyInitialRoot = zkApp.surveyMapRoot.get();
     const answerInitialRoot = zkApp.answerMapRoot.get();
     const nullifierInitialMapRoot = zkApp.nullifierMapRoot.get();
@@ -335,20 +340,17 @@ describe('Survey', () => {
       for (let j = 0; j < actions[i].length; j++) {
         let action = actions[i][j];
 
-        const surveyWitness = Provable.if(
-          action.isSurvey,
-          MerkleMapWitness,
-          surveyMerkleMap.getWitness(action.survey.dbId),
-          surveyMerkleMap.getWitness(action.answer.survey.dbId)
-        );
+        const surveyWitness = surveyMerkleMap.getWitness(action.content.surveyDbId);
         const answerWitness = Provable.if(
           action.isSurvey,
           MerkleMapWitness,
           answerMerkleMap.getWitness(Field(0)),
-          answerMerkleMap.getWitness(action.answer.dbId)
+          answerMerkleMap.getWitness(action.content.answerDbId)
         );
+
+        
         const nullifierKey = Poseidon.hash(
-          senderPublicKey.toFields().concat([action.answer.survey.dbId])
+          senderPublicKey.toFields().concat([action.content.surveyDbId])
         );
         let jsonNullifier = Nullifier.fromJSON(
           Nullifier.createTestNullifier([nullifierKey], senderPrivateKey)
@@ -373,26 +375,26 @@ describe('Survey', () => {
           nullifierWitness,
           senderPublicKey
         );
-        // check Provable method : if it evaluate both statements
+
         const surveyKey = Provable.if(
           action.isSurvey,
-          action.survey.dbId,
+          action.content.surveyDbId,
           Field(0)
         );
         const surveyData = Provable.if(
           action.isSurvey,
-          action.survey.data,
+          action.content.surveyData,
           Field(0)
         );
         const answerkey = Provable.if(
           action.isSurvey,
           Field(0),
-          action.answer.dbId
+          action.content.answerDbId
         );
         const answerData = Provable.if(
           action.isSurvey,
           Field(0),
-          action.answer.data
+          action.content.answerData
         );
         const nullifierMapKey = Provable.if(
           action.isSurvey,
@@ -404,15 +406,12 @@ describe('Survey', () => {
         answerMerkleMap.set(answerkey, answerData);
         nullifierMerkleMap.set(nullifierMapKey, nullifierData);
       }
-
       curProof = await ReduceProgram.cutActions(dummyAction, curProof.proof);
     }
-
     let tx = await Mina.transaction(senderPublicKey, async () => {
       await zkApp.updateStates(curProof.proof);
     });
-
     await tx.prove();
     await tx.sign([senderPrivateKey]).send();
-  });
+  }); 
 });
