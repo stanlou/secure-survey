@@ -42,6 +42,31 @@ router.get("/findMany", async (req: Request, res: Response) => {
 });
 
 router.get(
+  "/findOne/answers/:id",
+  async (req: Request, res: Response)  => {
+    try {
+      const survey = await prisma.survey.findUnique({
+        where: {
+          id: req.params.id,
+        }, 
+        select:{
+          id:true,
+          data:true,
+          answers:true
+        }
+      });
+      if (survey) {
+        res.status(200).json({ survey });
+      }
+    } catch (error) {
+      console.error("Error fetching survey:", error);
+      res.status(500).json({ message: "Failed to find survey" });
+    }
+  }
+);
+
+
+router.get(
   "/findOne/:id",
   async (req: Request, res: Response)  => {
     try {

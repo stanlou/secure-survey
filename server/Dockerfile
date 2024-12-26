@@ -1,5 +1,5 @@
 # Use node as the base image
-FROM node:20-alpine
+FROM node:20-alpine3.20
 
 # Update npm to version 7
 RUN npm i -g npm

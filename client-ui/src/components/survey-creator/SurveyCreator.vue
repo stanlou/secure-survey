@@ -1,9 +1,12 @@
 
 <template>
-  <div>
+  <div class="h-100">
+    <div class="navbar-div">
+      <Navbar/>
+    </div>
     <SurveyCreatorComponent :model="creator" />
-    <div @click="handleSaveSurvey">
-      <el-button class="w-100" type="success" size="large">CREATE</el-button> 
+    <div @click="handleSaveSurvey" class="d-flex justify-content-end">
+      <el-button class="create-btn" type="success" size="large">CREATE</el-button> 
     </div>
   </div>
 </template>
@@ -16,6 +19,8 @@ import { SurveyCreatorComponent } from "survey-creator-vue";
 import {onMounted} from 'vue'
 import { settings } from "survey-creator-core";
 import { useSurveyStore } from '@/store/surveyModule';
+import Navbar from '@/components/Navbar.vue';
+import { useRouter } from 'vue-router';
 
 settings.designer.defaultAddQuestionType = "radiogroup";
 
@@ -31,10 +36,16 @@ const creatorOptions: ICreatorOptions = {
 const { saveSurvey } = useSurveyStore()
 
 const creator = new SurveyCreatorModel(creatorOptions);
+const router = useRouter()
 
 const handleSaveSurvey = async () => {
-
+try {
   await saveSurvey(creator.JSON)
+  router.push({ name: "home" });
+}
+catch {
+  console.error("Failed to save survey");
+}
 
 }
 
@@ -43,3 +54,17 @@ onMounted(() => {
     banner.style.opacity = 0
 })
 </script>
+
+<style scoped>
+.navbar-div {
+  border-bottom: 2px solid #ececec;
+  margin-bottom: 2rem;
+}
+.create-btn {
+  background: #19b394; 
+  border: none;
+  padding: 26px 20px !important;
+  width: 120px;
+  margin-right: 2rem;
+}
+</style>

@@ -1,5 +1,10 @@
 <template>
-  <SurveyComponent :model="surveyModel" v-if="surveyModel"/>
+  <div>
+    <div class="navbar-div">
+      <Navbar/>
+    </div>
+    <SurveyComponent :model="surveyModel" v-if="surveyModel"/>
+  </div>
 </template>
 <script setup lang="ts">
 import 'survey-core/defaultV2.min.css';
@@ -12,6 +17,9 @@ import { useRoute } from 'vue-router';
 import { useSurveyStore } from '@/store/surveyModule';
 import { storeToRefs } from 'pinia';
 import { useAnswerStore } from '@/store/answerModule';
+import { json } from "./json";
+
+import Navbar from '@/components/Navbar.vue';
 
 const route = useRoute()
 const id = route.params.id
@@ -34,3 +42,8 @@ onMounted(async () => {
 
 })
 </script>
+<style scoped>
+.navbar-div {
+  border-bottom: 2px solid #ececec;
+}
+</style>
