@@ -39,6 +39,8 @@ export class SurveyContract extends SmartContract {
   @state(Field) surveyMapRoot = State<Field>();
   @state(Field) answerMapRoot = State<Field>();
   @state(Field) nullifierMapRoot = State<Field>();
+  @state(Field) nullifierMessage = State<Field>();
+
   @state(Field) lastProcessedActionState = State<Field>();
 
   reducer = Reducer({ actionType: ActionData });
@@ -49,6 +51,7 @@ export class SurveyContract extends SmartContract {
     this.answerMapRoot.set(INITIAL_MERKLE_MAP_ROOT);
     this.nullifierMapRoot.set(INITIAL_MERKLE_MAP_ROOT);
     this.lastProcessedActionState.set(Reducer.initialActionState)
+    this.nullifierMessage.set(Field.random())
   }
 
   // Method to reinitialize the smart contract states , only used for development

@@ -112,7 +112,7 @@ function reduceSurveys(
   input: ActionData,
   prevProof: SelfProof<ActionData, ReducePublicOutput>,
   surveyWitness: MerkleMapWitness,
-  newActionSubListState:Field
+  newActionSubListState:Field,
 ) {
   // Ensure the survey data is valid
   const validSurveyData = input.content.surveyData.equals(
@@ -156,7 +156,8 @@ function reduceAnswers(
   surveyWitness: MerkleMapWitness,
   answerWitness: MerkleMapWitness,
   nullifierWitness: MerkleMapWitness,
-  newActionSubListState:Field
+  newActionSubListState:Field,
+  nullifierMessage:Field
 ) {
   const validAnswerData = input.content.answerData.equals(
     Field(0),
@@ -193,7 +194,7 @@ function reduceAnswers(
   // Check for duplicate submissions (nullifier check)
 
   const nullifierKey = Poseidon.hash(
-  input.nullifier.getPublicKey().toFields().concat([survey.dbId])
+  input.nullifier.getPublicKey().toFields().concat([survey.dbId,nullifierMessage])
 );
 
   input.nullifier.verify([nullifierKey]);
@@ -257,6 +258,7 @@ export async function update(
   surveyWitness: MerkleMapWitness,
   answerWitness: MerkleMapWitness,
   nullifierWitness: MerkleMapWitness,
+  nullifierMessage: Field
 ): Promise<{ publicOutput: ReducePublicOutput }> {
   prevProof.verify();
 
@@ -264,6 +266,7 @@ export async function update(
     prevProof.publicOutput.actionSubListState,
     input
   );
+  
   const newPublicOutput = Provable.if(
     input.isSurvey,
     ReducerPublicOutputAndChecks,
@@ -274,7 +277,8 @@ export async function update(
       surveyWitness,
       answerWitness,
       nullifierWitness,
-      newActionSubListState
+      newActionSubListState,
+      nullifierMessage
     )
   );
   newPublicOutput.isValid.assertEquals(true)
@@ -333,6 +337,7 @@ export const ReduceProgram = ZkProgram({
         MerkleMapWitness,
         MerkleMapWitness,
         MerkleMapWitness,
+        Field
       ],
       async method(
         input: ActionData,
@@ -340,6 +345,7 @@ export const ReduceProgram = ZkProgram({
         surveyWitness: MerkleMapWitness,
         answerWitness: MerkleMapWitness,
         nullifierWitness: MerkleMapWitness,
+        nullifierMessage: Field
       ) {
         return update(
           input,
@@ -347,6 +353,7 @@ export const ReduceProgram = ZkProgram({
           surveyWitness,
           answerWitness,
           nullifierWitness,
+          nullifierMessage
         );
       },
     },
