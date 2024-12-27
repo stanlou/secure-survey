@@ -20,30 +20,43 @@ import {
   createAnswerStruct,
 } from "secure-survey";
 import { loopUntilAccountExists } from "../utils";
-const fs = require("fs");
+import fs from "fs";
 import { Client } from "mina-signer";
 import prisma from "../../prisma/client";
 const client = new Client({ network: "testnet" }); // Mind the `network` client configuration option
 
+type SurveyList = {
+ id : string,
+ hash: Field
+}
+type AnswerList = {
+  id : string,
+  hash: Field
+ }
+
+ 
 export const reduceActions = async () => {
+
   const Network = Mina.Network(
     "https://api.minascan.io/node/devnet/v1/graphql"
   );
   Mina.setActiveInstance(Network);
-
   const transactionFee = 100_000_000;
 
-  const seerverKeysFileContents = fs.readFileSync("keys/devnet.json", "utf8");
+  const seerverKeysFileContents = fs.readFileSync("keys/devnet/server-keys.json", "utf8");
   const serverPrivateKeyBase58 = JSON.parse(seerverKeysFileContents).privateKey;
 
   const serverPrivateKey = PrivateKey.fromBase58(serverPrivateKeyBase58);
   const serverPublicKey = serverPrivateKey.toPublicKey();
 
   const zkAppPublicKeyBase58 =
-    "B62qrFgEPmGTWW4KG4TQWuhPvufD6gkMSjnZ4UTZbxm4S1kUDUyD6oJ";
+    "B62qiveKmu2zbw9FgkWu7e7VbunErWUByCFZJCvzFCvWepJMSD8uCMP";
   const zkAppPublicKey = PublicKey.fromBase58(zkAppPublicKeyBase58);
 
   // ----------------------------------------------------
+
+
+
 
   let account = await loopUntilAccountExists({
     account: serverPublicKey,
@@ -64,18 +77,19 @@ export const reduceActions = async () => {
 
   // ----------------------------------------------------
 
-  console.log("Compiling smart contract...");
+  console.log("Compiling zk program...");
   await ReduceProgram.compile()
-  let { verificationKey } = await SurveyContract.compile();
+  console.log("Compiling smart contract...");
+  await SurveyContract.compile();
 
   let zkApp = new SurveyContract(zkAppPublicKey);
-
   await loopUntilAccountExists({
     account: zkAppPublicKey,
     eachTimeNotExist: () =>
       console.log("waiting for zkApp account to be deployed..."),
     isZkAppAccount: true,
   });
+
 
   const [nullifierList, surveyList, answerList] = await Promise.all([
     prisma.nullifier.findMany({}),
@@ -98,12 +112,12 @@ export const reduceActions = async () => {
   const surveyMerkleMap = new MerkleMap();
   const answerMerkleMap = new MerkleMap();
   const nullifierMerkleMap = new MerkleMap();
-  const pendingSurveys = [];
-  const pendingAnswers = [];
-  const pendingNullifiers = [];
-  const succeededSurveys = []
-  const succeededAnswers = []
-  const succeededNullifiers = []
+  const pendingSurveys = [] as Array<SurveyList>;
+  const pendingAnswers = [] as Array<AnswerList>;
+  const pendingNullifiers = [] as Array<string>;
+  const succeededSurveys = []  as Array<SurveyList>;
+  const succeededAnswers = [] as Array<AnswerList>;
+  const succeededNullifiers = [] as Array<string>;
   surveyList.map((e) => {
     const id = e.id;
     const data = JSON.stringify(e.data);
@@ -134,14 +148,16 @@ export const reduceActions = async () => {
         })
     }
   });
-  // todo : save nullifier.key() into database when creating answer
   nullifierList.map((e) => {
     if (e.status === "SUCCEEDED") {
     nullifierMerkleMap.set(Field(e.key), Field(1));
     }else{
         pendingNullifiers.push(e.key)
     }
-  });   
+  });    
+
+  console.log("getting actions ...")
+
 
   let curLatestProcessedState = zkApp.lastProcessedActionState.get();
   let actions = await zkApp.reducer.fetchActions({
@@ -177,7 +193,6 @@ export const reduceActions = async () => {
   for (let i = 0; i < actions.length; i++) {
     for (let j = 0; j < actions[i].length; j++) {
       let action = actions[i][j];
-          
       const surveyKey = action.content.surveyDbId;
       const surveyData = action.content.surveyData;
 
@@ -198,12 +213,22 @@ export const reduceActions = async () => {
       const nullifierMapKey = action.nullifier.key();
       const nullifierData = Provable.if(action.isSurvey, Field(0), Field(1));
 
-      // check database 
+      //  database check
 
-      
+      const databaseSurveyExists = pendingSurveys.find((e) => e.hash === survey.hash())
+      if(databaseSurveyExists){
+        succeededSurveys.push(databaseSurveyExists)
+      }
 
+      const databaseAnswerExists = pendingAnswers.find((e) => e.hash === answer.hash())
+      if(databaseAnswerExists){
+        succeededAnswers.push(databaseAnswerExists)
+      }
 
-
+      const databaseNullifierExists = pendingNullifiers.find((e) => Field(e) === nullifierMapKey)
+      if(databaseNullifierExists){
+        succeededNullifiers.push(databaseNullifierExists)
+      }
 
       const surveyWitness = surveyMerkleMap.getWitness(
         action.content.surveyDbId
@@ -245,5 +270,37 @@ export const reduceActions = async () => {
     await zkApp.updateStates(curProof.proof);
   });
   await tx.prove();
-  await tx.sign([serverPrivateKey]).send();
+  const pendingTx = await tx.sign([serverPrivateKey]).send();
+  await pendingTx.wait()
+  await prisma.survey.updateMany({
+    where:{
+      id:{
+        in:succeededSurveys.map((e:SurveyList) => e.id) 
+      }
+    },
+    data:{
+      status:"SUCCEEDED"
+    }
+  })
+  await prisma.answer.updateMany({
+    where:{
+      id:{
+        in:succeededAnswers.map((e:AnswerList) => e.id) 
+      }
+    },
+    data:{
+      status:"SUCCEEDED"
+    }
+  })
+  await prisma.nullifier.updateMany({
+    where:{
+      key:{
+        in:succeededNullifiers.map((e:string) => e) 
+      }
+    },
+    data:{
+      status:"SUCCEEDED"
+    }
+  })
 };
+

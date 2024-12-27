@@ -20,7 +20,7 @@ declare global {
     mina?: MinaWallet;
   }
 }
-const ZKAPP_ADDRESS = "B62qrFgEPmGTWW4KG4TQWuhPvufD6gkMSjnZ4UTZbxm4S1kUDUyD6oJ";
+const ZKAPP_ADDRESS = "B62qiveKmu2zbw9FgkWu7e7VbunErWUByCFZJCvzFCvWepJMSD8uCMP";
 const TRANSACTION_FEE = 0.1;
 
 export const useZkAppStore = defineStore("useZkAppModule", {

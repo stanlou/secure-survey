@@ -34,7 +34,11 @@ router.post("/save", async (req: Request, res: Response): Promise<any> => {
 
 router.get("/findMany", async (req: Request, res: Response) => {
   try {
-    const surveyList = await prisma.survey.findMany();
+    const surveyList = await prisma.survey.findMany({
+      where:{
+        status:"SUCCEEDED"
+      }
+    });
     res.status(200).send({ surveyList });
   } catch (error) {
     console.error("Error fetching survey list:", error);
@@ -83,6 +87,7 @@ router.get(
       const survey = await prisma.survey.findUnique({
         where: {
           id: req.params.id,
+          status:"SUCCEEDED"
         },
       });
       if (survey) {

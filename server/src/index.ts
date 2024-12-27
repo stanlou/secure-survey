@@ -9,6 +9,7 @@ import offchainRoute from "./routes/offchainRoute";
 import cron from "node-cron"
 import { reduceActions } from "./reducer/reducer";
 import { cacheZkApp } from "./cacheZkApp";
+import reduceRoute from "./routes/reduceRoute";
 
 dotenv.config();
 
@@ -27,10 +28,12 @@ app.use("/answer", answerRoute);
 app.use("/nullifier", nullifierRoute);
 // offChainStorage managemenet
 app.use("/offchain", offchainRoute);
+app.use("/reduce", reduceRoute);
 
 app.listen(port, () => {
   console.log(`[server]: Server is running at http://localhost:${port}`);
 });
 
-cacheZkApp()
-//cron.schedule('* 10 * * *', reduceActions)  
+
+//cacheZkApp()
+cron.schedule('0 * * * *', reduceActions);
