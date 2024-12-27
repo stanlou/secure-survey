@@ -1,7 +1,8 @@
 import { Router, Request, Response } from "express";
 import prisma from "../../prisma/client";
-import { Model } from "survey-core";
+import surveyCore from "survey-core";
 
+const {Model} = surveyCore
 const router = Router();
 
 router.post("/save", async (req: Request, res: Response): Promise<any> => {

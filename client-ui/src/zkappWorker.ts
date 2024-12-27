@@ -105,6 +105,8 @@ const functions = {
   },
   initZkappInstance: async (args: { publicKeyBase58: string }) => {
     const publicKey = PublicKey.fromBase58(args.publicKeyBase58);
+    await fetchAccount({publicKey})
+
     state.zkappInstance = new state.SurveyContract!(publicKey);
     return {
       surveyMapRoot: state.zkappInstance!.surveyMapRoot.get(),

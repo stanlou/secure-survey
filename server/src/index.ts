@@ -8,6 +8,7 @@ import cors from "cors";
 import offchainRoute from "./routes/offchainRoute";
 import cron from "node-cron"
 import { reduceActions } from "./reducer/reducer";
+import { cacheZkApp } from "./cacheZkApp";
 
 dotenv.config();
 
@@ -22,7 +23,7 @@ app.use(express.json());
 app.use("/survey", surveyRoute);
 // Register answer routes
 app.use("/answer", answerRoute);
-// Register nullifier routes
+// Register nullifier routes  
 app.use("/nullifier", nullifierRoute);
 // offChainStorage managemenet
 app.use("/offchain", offchainRoute);
@@ -30,5 +31,6 @@ app.use("/offchain", offchainRoute);
 app.listen(port, () => {
   console.log(`[server]: Server is running at http://localhost:${port}`);
 });
-  
-//cron.schedule('* 10 * * *', reduceActions)
+
+cacheZkApp()
+//cron.schedule('* 10 * * *', reduceActions)  

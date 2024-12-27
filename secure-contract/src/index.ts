@@ -1,6 +1,6 @@
-import { createAnswerStruct, createSurveyStruct } from './helpers/structConstructor';
-import { ReduceProgram } from './ReduceProof';
-import { ActionData, DispatchData } from './structs/ActionData';
-import { SurveyContract, Answer , Survey } from './Survey';
+import { createAnswerStruct, createSurveyStruct } from './helpers/structConstructor.js';
+import { ReduceProgram } from './ReduceProof.js';
+import { ActionData, DispatchData } from './structs/ActionData.js';
+import { SurveyContract, Answer , Survey } from './Survey.js';
 
 export { SurveyContract,Answer , Survey ,createAnswerStruct, createSurveyStruct,ActionData,DispatchData,ReduceProgram};

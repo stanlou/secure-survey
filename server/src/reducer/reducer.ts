@@ -141,7 +141,7 @@ export const reduceActions = async () => {
     }else{
         pendingNullifiers.push(e.key)
     }
-  });
+  });   
 
   let curLatestProcessedState = zkApp.lastProcessedActionState.get();
   let actions = await zkApp.reducer.fetchActions({
