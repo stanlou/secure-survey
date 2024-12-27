@@ -13,10 +13,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Status {
+  PENDING
+  SUCCEEDED
+}
+
+
 model Survey {
   id String @id @default(dbgenerated("gen_random_uuid()"))
   data  Json
   answers Answer[]
+  status  Status @default(PENDING)
 }
 
 model Answer {
@@ -24,8 +31,10 @@ model Answer {
   data  Json
   surveyId String
   survey   Survey @relation(fields: [surveyId],references: [id])
+  status  Status  @default(PENDING)
 }
 
 model Nullifier {
   key   String @id 
+  status  Status @default(PENDING)
 }

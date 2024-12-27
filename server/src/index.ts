@@ -6,6 +6,8 @@ import nullifierRoute from "./routes/nullifierRoute";
 
 import cors from "cors";
 import offchainRoute from "./routes/offchainRoute";
+import cron from "node-cron"
+import { reduceActions } from "./reducer/reducer";
 
 dotenv.config();
 
@@ -29,3 +31,4 @@ app.listen(port, () => {
   console.log(`[server]: Server is running at http://localhost:${port}`);
 });
   
+//cron.schedule('* 10 * * *', reduceActions)

@@ -2,47 +2,15 @@ import {
   Bool,
   Field,
   MerkleMapWitness,
-  Nullifier,
   Poseidon,
   Provable,
-  PublicKey,
   SelfProof,
   Struct,
   ZkProgram,
 } from 'o1js';
-import { ActionData } from './structs/ActionData';
-import { Answer, Survey } from './Survey';
+import { ActionData } from './structs/ActionData.js';
+import { Answer, Survey } from './Survey.js';
 
-/*  class Survey extends Struct({
-  dbId: Field, // Identifier for the survey
-  data: Field, // Content of the survey
-}) {
-  hash(): Field {
-    return Poseidon.hash(Survey.toFields(this));
-  }
-}
-
- class Answer extends Struct({
-  dbId: Field, // Identifier for the answer
-  survey: Survey, // Reference to the asnwered survey
-  data: Field, // Content of the answer
-}) {
-  hash(): Field {
-    return Poseidon.hash(Answer.toFields(this));
-  }
-}
- class ActionData extends Struct({
-  isSurvey: Bool,
-  survey: Survey,
-  answer: Answer,
-  nullifier: Nullifier,
-  
-}) {
-  hash(): Field {
-    return Poseidon.hash(ActionData.toFields(this));
-  }
-}
- */
 
 // https://github.com/o1-labs/o1js-bindings/blob/71f2e698dadcdfc62c76a72248c0df71cfd39d4c/lib/binable.ts#L317
 let encoder = new TextEncoder();

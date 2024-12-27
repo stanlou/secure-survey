@@ -6,6 +6,7 @@ import { Field, Nullifier, Poseidon, PublicKey } from "o1js";
 import { createAnswerStruct } from "secure-survey";
 import { createNullifier } from "../helper/nullifier";
 import { AnswerType, SurveyType } from "../types";
+import { colProps } from "element-plus";
 
 interface MinaWallet {
   requestAccounts: () => Promise<string[]>;
@@ -19,8 +20,9 @@ declare global {
     mina?: MinaWallet;
   }
 }
-const ZKAPP_ADDRESS = "B62qnoqVwzVdCduoh1R7xYof7zPyCMsFbkUdKMC8mT4pMhcop7fEbJp";
+const ZKAPP_ADDRESS = "B62qrFgEPmGTWW4KG4TQWuhPvufD6gkMSjnZ4UTZbxm4S1kUDUyD6oJ";
 const TRANSACTION_FEE = 0.1;
+
 export const useZkAppStore = defineStore("useZkAppModule", {
   state: () => ({
     zkappWorkerClient: null as null | ZkappWorkerClient,
@@ -33,6 +35,7 @@ export const useZkAppStore = defineStore("useZkAppModule", {
     error: null as Object | any,
     loading: false,
     currentTransactionLink: "",
+    zkAppStates : null as null | any
   }),
   getters: {},
   actions: {
@@ -62,8 +65,7 @@ export const useZkAppStore = defineStore("useZkAppModule", {
           await this.zkappWorkerClient.compileContract();
           this.stepDisplay = "zkApp compiled";
           
-          await this.zkappWorkerClient.initZkappInstance(ZKAPP_ADDRESS);
-
+          this.zkAppStates = await this.zkappWorkerClient.initZkappInstance(ZKAPP_ADDRESS);
           this.hasBeenSetup = true;
           this.hasWallet = true;
           this.stepDisplay = "";
@@ -106,7 +108,15 @@ export const useZkAppStore = defineStore("useZkAppModule", {
         this.stepDisplay = "Creating a transaction...";
         await this.zkappWorkerClient!.fetchAccount(this.publicKeyBase58);
 
-        await this.zkappWorkerClient!.createSurveyTransaction(survey);
+        this.stepDisplay = "Creating a nullifier"
+        const nullifierKey = createNullifier(this.publicKeyBase58,survey.id)
+
+        const jsonNullifier = await (window as any).mina.createNullifier({
+          message: [nullifierKey]
+        })
+
+        
+        await this.zkappWorkerClient!.createSurveyTransaction(survey,jsonNullifier);
 
         this.stepDisplay = "Creating proof...";
         await this.zkappWorkerClient!.proveTransaction();
@@ -137,7 +147,7 @@ export const useZkAppStore = defineStore("useZkAppModule", {
         this.loading = true;
         await this.zkappWorkerClient!.fetchAccount(this.publicKeyBase58);
         this.stepDisplay = "Creating a nullifier"
-        const nullifierKey = createNullifier(this.publicKeyBase58,answer)
+        const nullifierKey = createNullifier(this.publicKeyBase58,answer.survey.id)
 
 
         this.stepDisplay = "Creating a nullifier...";

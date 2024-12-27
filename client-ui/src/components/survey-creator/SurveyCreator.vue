@@ -21,6 +21,7 @@ import { settings } from "survey-creator-core";
 import { useSurveyStore } from '@/store/surveyModule';
 import Navbar from '@/components/Navbar.vue';
 import { useRouter } from 'vue-router';
+import { ElNotification } from 'element-plus'
 
 settings.designer.defaultAddQuestionType = "radiogroup";
 
@@ -41,6 +42,11 @@ const router = useRouter()
 const handleSaveSurvey = async () => {
 try {
   await saveSurvey(creator.JSON)
+  ElNotification({
+    title: 'Success',
+    message: 'The survey will be available as soon as it is validated on-chain.',
+    type: 'success',
+  })
   router.push({ name: "home" });
 }
 catch {

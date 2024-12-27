@@ -6,11 +6,22 @@ const router = Router();
 router.post("/save", async (req: Request, res: Response)  => {
   try {
     const nullifierJson = req.body; 
-    const createNullifier = await prisma.nullifier.create({
-      data: nullifierJson,
-    }); 
+    const existingNullifier = await prisma.nullifier.findUnique({
+      where:{
+        key:nullifierJson
+      }
+    })
+    if(!existingNullifier){
+      const createNullifier = await prisma.nullifier.create({
+        data: nullifierJson,
+      }); 
+  
+    }else{
+      res.status(500).json({ message: "Nullifier already exist" });
+      return
+    }
 
-    res.status(201).json({ message: "Nullifier saved successfully", createNullifier });
+    res.status(201).json({ message: "Nullifier saved successfully", nullifierJson });
   } catch (error) {
     console.error("Error saving nullifier:", error);
     res.status(500).json({ message: "Failed to save nullifier" });

@@ -52,7 +52,16 @@ router.get(
         select:{
           id:true,
           data:true,
-          answers:true
+          answers:{
+            select:{
+              id:true,
+              data:true,
+              surveyId:true
+            },
+            where:{
+              status:"SUCCEEDED"
+            }
+          }
         }
       });
       if (survey) {

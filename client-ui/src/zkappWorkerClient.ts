@@ -47,8 +47,8 @@ export default class ZkappWorkerClient {
     return await this._call('loadOffChainStorage', {});
   }
 
-  async createSurveyTransaction(survey: SurveyType) {
-    return await this._call('createSurveyTransaction', {survey});
+  async createSurveyTransaction(survey: SurveyType,jsonNullifier:Nullifier) {
+    return await this._call('createSurveyTransaction', {survey,jsonNullifier});
   }
 
    async createAnswerTransaction(answer: AnswerType,publicKeyBase58: string,jsonNullifier:Nullifier) {

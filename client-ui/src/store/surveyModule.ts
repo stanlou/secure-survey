@@ -24,7 +24,6 @@ export const useSurveyStore = defineStore('surveyModule', {
       async saveSurvey(surveyData:object) {
         try {
             const {data} = await axios.post(API_Base_URL+"/survey/save",surveyData)
-            this.surveyList = [...this.surveyList , data.createdSurvey]    
             await createSurvey(data.createdSurvey)
         } catch(err) {
             this.error = err

@@ -16,6 +16,7 @@ import {
   Survey,
   createSurveyStruct,
   createAnswerStruct,
+  ReduceProgram,
 } from "secure-survey";
 import { AnswerType, NullifierJson, NullifierType, SurveyType } from "./types";
 
@@ -84,10 +85,16 @@ const functions = {
     Mina.setActiveInstance(Network);
   },
   loadContract: async (args: {}) => {
+    console.log("loadddd")
     const { SurveyContract } = await import("secure-survey");
     state.SurveyContract = SurveyContract;
+    console.log("enddd loaadd")
   },
   compileContract: async (args: {}) => {
+    console.log("compiling zk program...")
+    await ReduceProgram.compile()
+  
+    console.log("compiling zk app...")
     const { verificationKey } = await state.SurveyContract!.compile();
     state.verificationKey = verificationKey;
   },
@@ -99,6 +106,13 @@ const functions = {
   initZkappInstance: async (args: { publicKeyBase58: string }) => {
     const publicKey = PublicKey.fromBase58(args.publicKeyBase58);
     state.zkappInstance = new state.SurveyContract!(publicKey);
+    return {
+      surveyMapRoot: state.zkappInstance!.surveyMapRoot.get(),
+      answerMapRoot: state.zkappInstance!.answerMapRoot.get(),
+      nullifierMapRoot: state.zkappInstance!.nullifierMapRoot.get(),
+      lastProcessedActionState: state.zkappInstance!.lastProcessedActionState.get(),
+      nullifierMessage: state.zkappInstance!.nullifierMessage.get(),
+    }
   },
   proveTransaction: async (args: {}) => {
     await state.transaction!.prove();
@@ -112,22 +126,15 @@ const functions = {
     offChainStorage.loadOffChainState();
     state.offChainStorage = offChainStorage;
   },
-  createSurveyWitness: async (args: { surveyId: Field }) => {
-    return state.offChainStorage!.surveyMerkleMap.getWitness(args.surveyId);
-  },
-  createAnswerWitness: async (args: { answerId: Field }) => {
-    return state.offChainStorage!.answerMerkleMap.getWitness(args.answerId);
-  },
-  createSurveyTransaction: async (args: { survey: SurveyType }) => {
+  createSurveyTransaction: async (args: { survey: SurveyType,jsonNullifier:NullifierJson }) => {
     const surveyStruct = createSurveyStruct(
       args.survey.id,
       JSON.stringify(args.survey.data)
     );
-    const witness = await functions.createSurveyWitness({
-      surveyId: surveyStruct.dbId,
-    });
+    const nullifier = Nullifier.fromJSON(args.jsonNullifier)
+
     state.transaction = await Mina.transaction(async () => {
-      await state.zkappInstance!.saveSurvey(surveyStruct, witness);
+      await state.zkappInstance!.saveSurvey(surveyStruct,nullifier);
     });
     state.transaction!.send();
   },
@@ -142,31 +149,17 @@ const functions = {
       JSON.stringify(args.answer.data),
       surveyStruct
     );
-
-    const surveyWitness = await functions.createSurveyWitness({
-      surveyId: answerStruct.survey.dbId,
-    });
-
-    const answerWitness = await functions.createAnswerWitness({
-      answerId: answerStruct.dbId,
-    });
     
     const answererPublicKey = PublicKey.fromBase58(args.publicKeyBase58);
     const nullifier = Nullifier.fromJSON(args.jsonNullifier)
 
-    const nullifierWitness = Provable.witness(MerkleMapWitness, () =>
-      state.offChainStorage!.nullifierMerkleMap.getWitness(nullifier.key())
-    );
+  
 
    
     state.transaction = await Mina.transaction(answererPublicKey, async () => {
       await state.zkappInstance!.saveAnswer(
         answerStruct,
-        answerWitness,
-        surveyWitness,
-        answererPublicKey,
         nullifier,
-        nullifierWitness,
         
       );
     });

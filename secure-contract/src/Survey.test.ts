@@ -172,6 +172,8 @@ describe('Survey', () => {
   const testSurveys = [
     createSurveyStruct('1n', plainSurveyData),
     createSurveyStruct('2n', plainSurvey2Data),
+    createSurveyStruct('3n', plainSurvey2Data),
+
   ];
   const testAnswers = [
     [
@@ -183,9 +185,14 @@ describe('Survey', () => {
   const fakeSurveyId = createSurveyStruct('100n', plainSurveyData);
   beforeAll(async () => {
     if (proofsEnabled) {
+      console.time("compiling")
      await ReduceProgram.compile();
+      console.timeEnd("compiling")
+      console.time("zk")
 
       await SurveyContract.compile();
+      console.timeEnd("zk")
+
     }
     const Local = await Mina.LocalBlockchain({ proofsEnabled });
     Mina.setActiveInstance(Local);
@@ -212,7 +219,6 @@ describe('Survey', () => {
     await deployTx.prove();
     await deployTx.sign([senderPrivateKey, surveyZkAppPrivateKey]).send();
   };
-
   it('deploy survey smart contract', async () => {
     await deploy();
     const zkSurveyRoot = zkApp.surveyMapRoot.get();
@@ -452,4 +458,8 @@ describe('Survey', () => {
     await tx.sign([senderPrivateKey]).send();
 
   }); 
+  it('create a new survey', async () => {
+    await createSurvey(testSurveys[2]);
+  });
+
 });
