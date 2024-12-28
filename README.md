@@ -27,7 +27,7 @@ This project is a blockchain-based survey application designed to ensure the int
 
 ---
 
-## Smart Contract: `SurveyContract`  
+## Smart Contract:   
 
 ### States  
 
@@ -76,7 +76,7 @@ The **actionType** defines the structure of dispatched actions:
   - `surveyDbId`: Extracted from the referenced `survey`.  
   - `answerData`: Extracted from `answer`.  
   - `surveyData`: Extracted from the referenced `survey`.  
-- `nullifier`: Ensures the user submits only one response.  
+- `nullifier`: Ensures the user submits only one response per survey.  
 - `isSurvey`: `Bool(false)` to indicate this action is for an answer.  
 
 ---
