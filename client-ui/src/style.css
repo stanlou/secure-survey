@@ -5,12 +5,19 @@
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
+  background-color: #f3f3f3;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0 0 3rem 0 !important;
+  padding: 0;
+  height: 100%;
+  background: #f3f3f3 !important;
+  background-color: #f3f3f3 !important;
 }
 
 a {
@@ -47,7 +54,7 @@ button:focus-visible {
 }
 
 .card {
-  padding: 2em;
+  padding: 1em;
 }
 
 #app {
@@ -57,8 +64,6 @@ button:focus-visible {
 
 @media (prefers-color-scheme: light) {
   :root {
-    color: #213547;
-    background-color: #ffffff;
   }
   a:hover {
     color: #747bff;

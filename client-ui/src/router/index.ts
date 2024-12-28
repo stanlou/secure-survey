@@ -3,7 +3,30 @@ import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
 
 const routes: Array<RouteRecordRaw> = [
   {
+    path: "/sign-in",
+    name: "sign-in",
+    meta: {
+      requiresAuth: false,
+    },
+    component: () =>
+      import(
+        /* webpackChunkName: "SignIn" */ "@/views/auth/SignIn.vue"
+      ),
+  },
+  {
+    path: "",
+    name:"home",
+    meta: {
+      requiresAuth: false,
+    },
+    component: () =>
+      import(
+        /* webpackChunkName: "survey-list" */ "@/views/home/Home.vue"
+      ),
+  },
+  {
     path: "/surveyCreator",
+    name: "create-survey",
     meta: {
       requiresAuth: true,
     },
@@ -14,6 +37,7 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: "/surveyForm/:id",
+    name: "answer-survey",
     meta: {
       requiresAuth: true,
     },
@@ -23,13 +47,14 @@ const routes: Array<RouteRecordRaw> = [
       ),
   },
   {
-    path: "",
+    path: "/dashboard/:id",
+    name: "dashboard",
     meta: {
-      requiresAuth: false,
+      requiresAuth: true,
     },
     component: () =>
       import(
-        /* webpackChunkName: "Home" */ "@/views/home/Home.vue"
+        /* webpackChunkName: "SurveyForm" */ "@/views/dashboard/Dashboard.vue"
       ),
   },
  

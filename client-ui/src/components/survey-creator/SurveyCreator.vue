@@ -1,9 +1,12 @@
 
 <template>
-  <div>
+  <div class="h-100">
+    <div class="navbar-div">
+      <Navbar/>
+    </div>
     <SurveyCreatorComponent :model="creator" />
-    <div @click="handleSaveSurvey">
-      <el-button class="w-100" type="success" size="large">CREATE</el-button> 
+    <div @click="handleSaveSurvey" class="d-flex justify-content-end">
+      <el-button class="create-btn" type="success" size="large">CREATE</el-button> 
     </div>
   </div>
 </template>
@@ -11,11 +14,14 @@
 import 'survey-core/defaultV2.min.css';
 import "survey-creator-core/survey-creator-core.min.css";
 import type { ICreatorOptions } from "survey-creator-core";
-import { copyObject, SurveyCreatorModel } from "survey-creator-core";
+import {  SurveyCreatorModel } from "survey-creator-core";
 import { SurveyCreatorComponent } from "survey-creator-vue";
 import {onMounted} from 'vue'
-import axios from 'axios'
 import { settings } from "survey-creator-core";
+import { useSurveyStore } from '@/store/surveyModule';
+import Navbar from '@/components/Navbar.vue';
+import { useRouter } from 'vue-router';
+import { ElNotification } from 'element-plus'
 
 settings.designer.defaultAddQuestionType = "radiogroup";
 
@@ -27,14 +33,26 @@ const creatorOptions: ICreatorOptions = {
   questionTypes: ["checkbox","dropdown","radiogroup","tagbox","boolean","ranking"],
 };
 
-const API_URL = import.meta.env.VITE_API_URL;
 
+const { saveSurvey } = useSurveyStore()
 
 const creator = new SurveyCreatorModel(creatorOptions);
+const router = useRouter()
 
-const handleSaveSurvey = async () : Promise<any> => {
-  console.log("ddd",creator.JSON)
-   await axios.post(API_URL+'/survey/saveSurvey',creator.JSON)
+const handleSaveSurvey = async () => {
+try {
+  await saveSurvey(creator.JSON)
+  ElNotification({
+    title: 'Success',
+    message: 'The survey will be available as soon as it is validated on-chain.',
+    type: 'success',
+  })
+  router.push({ name: "home" });
+}
+catch {
+  console.error("Failed to save survey");
+}
+
 }
 
 onMounted(() => {
@@ -42,3 +60,17 @@ onMounted(() => {
     banner.style.opacity = 0
 })
 </script>
+
+<style scoped>
+.navbar-div {
+  border-bottom: 2px solid #ececec;
+  margin-bottom: 2rem;
+}
+.create-btn {
+  background: #19b394; 
+  border: none;
+  padding: 26px 20px !important;
+  width: 120px;
+  margin-right: 2rem;
+}
+</style>

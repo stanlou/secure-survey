@@ -1,5 +1,5 @@
 {
-  "name": "secure-contract",
+  "name": "secure-survey",
   "version": "0.1.0",
   "description": "",
   "author": "",
@@ -36,9 +36,13 @@
     "typescript": "^5.1"
   },
   "peerDependencies": {
-    "o1js": "^1.*"
+    "o1js": "2.2.0"
   },
   "engines": {
     "node": ">=18.14.0"
+  },
+  "dependencies": {
+    "mina-signer": "^3.0.7",
+    "node-json-db": "^2.3.0"
   }
 }

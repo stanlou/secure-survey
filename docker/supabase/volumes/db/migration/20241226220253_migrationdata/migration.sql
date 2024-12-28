@@ -1,0 +1,8 @@
+-- AlterTable
+ALTER TABLE "Answer" ADD COLUMN     "status" TEXT NOT NULL DEFAULT 'PENDING';
+
+-- AlterTable
+ALTER TABLE "Nullifier" ADD COLUMN     "status" TEXT NOT NULL DEFAULT 'PENDING';
+
+-- AlterTable
+ALTER TABLE "Survey" ADD COLUMN     "status" TEXT NOT NULL DEFAULT 'PENDING';

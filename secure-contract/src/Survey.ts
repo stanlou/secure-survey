@@ -2,16 +2,19 @@ import {
   Bool,
   Field,
   MerkleMap,
-  MerkleMapWitness,
   method,
+  Nullifier,
   Poseidon,
   PublicKey,
+  Reducer,
   Signature,
   SmartContract,
   State,
   state,
   Struct,
 } from 'o1js';
+import { ReduceProof } from './ReduceProof.js';
+import { ActionData, DispatchData } from './structs/ActionData.js';
 
 export class Survey extends Struct({
   dbId: Field, // Identifier for the survey
@@ -24,111 +27,119 @@ export class Survey extends Struct({
 
 export class Answer extends Struct({
   dbId: Field, // Identifier for the answer
-  surveyDbId: Field, // Reference to the survey ID
+  survey: Survey, // Reference to the asnwered survey
   data: Field, // Content of the answer
 }) {
   hash(): Field {
     return Poseidon.hash(Answer.toFields(this));
   }
 }
-
+const serverPublicKeyBase58 =
+  'B62qihpfJjEcwDYkLhHoTAST1uFChgStMSM2mLVdPB5ybSRqKkocXao';
+const INITIAL_MERKLE_MAP_ROOT = new MerkleMap().getRoot();
 export class SurveyContract extends SmartContract {
   @state(Field) surveyMapRoot = State<Field>();
-  @state(Field) surveyCount = State<Field>();
   @state(Field) answerMapRoot = State<Field>();
-  @state(Field) answerCount = State<Field>();
   @state(Field) nullifierMapRoot = State<Field>();
-  @state(Bool) isInitialized = State<Bool>();
+  @state(Field) nullifierMessage = State<Field>();
+  @state(PublicKey) serverPublicKey = State<PublicKey>();
+
+  @state(Field) lastProcessedActionState = State<Field>();
+
+  reducer = Reducer({ actionType: ActionData });
 
   init() {
     super.init();
-    this.surveyMapRoot.set(new MerkleMap().getRoot());
-    this.surveyCount.set(Field(0));
-    this.answerMapRoot.set(new MerkleMap().getRoot());
-    this.answerCount.set(Field(0));
-    this.nullifierMapRoot.set(new MerkleMap().getRoot());
-    this.isInitialized.set(Bool(true));
+    this.surveyMapRoot.set(INITIAL_MERKLE_MAP_ROOT);
+    this.answerMapRoot.set(INITIAL_MERKLE_MAP_ROOT);
+    this.nullifierMapRoot.set(INITIAL_MERKLE_MAP_ROOT);
+    this.lastProcessedActionState.set(Reducer.initialActionState);
+    this.nullifierMessage.set(Field.random());
+    this.serverPublicKey.set(PublicKey.fromBase58(serverPublicKeyBase58));
+  }
+
+  // Method to reinitialize the smart contract states , only used for development
+  @method async initState() {
+    this.surveyMapRoot.set(INITIAL_MERKLE_MAP_ROOT);
+    this.answerMapRoot.set(INITIAL_MERKLE_MAP_ROOT);
+    this.nullifierMapRoot.set(INITIAL_MERKLE_MAP_ROOT);
   }
 
   // Method to save a survey in the Merkle tree
-  @method async saveSurvey(survey: Survey, witness: MerkleMapWitness) {
-    // Ensure the contract is initialized
-    const isInitialized = this.isInitialized.getAndRequireEquals();
-    isInitialized.assertTrue("Contract is not initialized.");
-
-    // Get the current survey root and count
-    const initialRoot = this.surveyMapRoot.getAndRequireEquals();
-    const currentSurveyCount = this.surveyCount.getAndRequireEquals();
-
-    // Ensure the survey data is valid
-    survey.data.assertNotEquals(Field(0), "Survey data must not be empty.");
-
-    // Verify the witness and update the Merkle tree
-    const [rootBefore, key] = witness.computeRootAndKeyV2(Field(0));
-    rootBefore.assertEquals(initialRoot, "Invalid Merkle tree witness.");
-    key.assertEquals(survey.dbId, "Survey ID does not match the witness key.");
-    const [rootAfter, _] = witness.computeRootAndKeyV2(survey.hash());
-    
-    // Update the contract state
-    this.surveyMapRoot.set(rootAfter);
-    this.surveyCount.set(currentSurveyCount.add(Field(1)));
+  @method async saveSurvey(survey: Survey, nullifier: Nullifier) {
+    const dispatchContent = new DispatchData({
+      answerDbId: Field(0),
+      surveyDbId: survey.dbId,
+      answerData: Field(0),
+      surveyData: survey.data,
+    });
+    const dispatchedData = new ActionData({
+      content: dispatchContent,
+      nullifier,
+      isSurvey: Bool(true),
+    });
+    this.reducer.dispatch(dispatchedData);
   }
 
   // Method to save an answer to a survey
-  @method async saveAnswer(
-    answer: Answer,
-    survey: Survey,
-    answerWitness: MerkleMapWitness,
-    surveyWitness: MerkleMapWitness,
-    answererPublicKey: PublicKey,
-    nullifierWitness: MerkleMapWitness,
-    signature: Signature
+  @method async saveAnswer(answer: Answer, nullifier: Nullifier) {
+    const dispatchContent = new DispatchData({
+      answerDbId: answer.dbId,
+      surveyDbId: answer.survey.dbId,
+      answerData: answer.data,
+      surveyData: answer.survey.data,
+    });
+    const dispatchedData = new ActionData({
+      content: dispatchContent,
+      nullifier,
+      isSurvey: Bool(false),
+    });
+    this.reducer.dispatch(dispatchedData);
+  }
+
+  @method async updateStates(
+    reduceProof: ReduceProof,
+    serverSignature: Signature
   ) {
-    // Ensure the contract is initialized
-    const isInitialized = this.isInitialized.getAndRequireEquals();
-    isInitialized.assertTrue("Contract is not initialized.");
+    const serverPubKey = this.serverPublicKey.getAndRequireEquals();
+    const lastProcessedActionState =
+      this.lastProcessedActionState.getAndRequireEquals();
+    const currentSurveyRoot = this.surveyMapRoot.getAndRequireEquals();
+    const currentAnswerRoot = this.answerMapRoot.getAndRequireEquals();
+    const currentNullifierRoot = this.nullifierMapRoot.getAndRequireEquals();
 
-    const answerInitialRoot = this.answerMapRoot.getAndRequireEquals();
-    const currentAnswerCount = this.answerCount.getAndRequireEquals();
-    const surveyInitialRoot = this.surveyMapRoot.getAndRequireEquals();
-    const nullifierInitialRoot = this.nullifierMapRoot.getAndRequireEquals();
+    serverSignature
+      .verify(serverPubKey, [
+        currentSurveyRoot,
+        currentAnswerRoot,
+        currentNullifierRoot,
+      ])
+      .assertTrue();
 
-    // Validate the answer's data
-    answer.data.assertNotEquals(Field(0), "Answer data must not be empty.");
+    reduceProof.verify();
 
-    // Verify the answer Merkle tree witness
-    const [rootBefore, key] = answerWitness.computeRootAndKeyV2(Field(0));
-    rootBefore.assertEquals(answerInitialRoot, "Invalid answer Merkle tree witness.");
-    key.assertEquals(answer.dbId, "Answer ID does not match the witness key.");
-
-    // Validate the signature
-    const signatureMessage = Poseidon.hash(
-      answererPublicKey.toFields().concat(survey.dbId)
+    // Proof inputs check
+    reduceProof.publicOutput.initialActionState.assertEquals(
+      lastProcessedActionState
     );
-    signature
-      .verify(answererPublicKey, signatureMessage.toFields())
-      .assertTrue("Invalid signature for the answer.");
 
-    // Verify the survey exists
-    survey.data.assertNotEquals(Field(0), "Survey data must not be empty.");
-    const [currentSurveyRoot, currentSurveyKey] =
-      surveyWitness.computeRootAndKeyV2(survey.data);
-    currentSurveyRoot.assertEquals(surveyInitialRoot, "Survey does not exist.");
-    currentSurveyKey.assertEquals(survey.dbId, "Survey ID mismatch.");
-
-    // Check for duplicate submissions (nullifier check)
-    const nullifierKey = Poseidon.hash(
-      answererPublicKey.toFields().concat([survey.dbId])
+    reduceProof.publicOutput.initialSurveyMapRoot.assertEquals(
+      currentSurveyRoot
     );
-    const [currentNullifierRoot, currentNullifierKey] =
-      nullifierWitness.computeRootAndKeyV2(Field(0));
-    currentNullifierRoot.assertEquals(nullifierInitialRoot, "Invalid nullifier witness.");
-    currentNullifierKey.assertEquals(nullifierKey, "Nullifier key mismatch.");
+    reduceProof.publicOutput.initialAnswerMapRoot.assertEquals(
+      currentAnswerRoot
+    );
+    reduceProof.publicOutput.initialNullifierMapRoot.assertEquals(
+      currentNullifierRoot
+    );
 
-    const [rootAfter, _] = answerWitness.computeRootAndKeyV2(answer.hash());
-    const [nullifierRootAfter, _key] = nullifierWitness.computeRootAndKeyV2(Field(1));
-    this.answerMapRoot.set(rootAfter);
-    this.nullifierMapRoot.set(nullifierRootAfter);
-    this.answerCount.set(currentAnswerCount.add(Field(1)));
+    this.account.actionState.requireEquals(
+      reduceProof.publicOutput.actionListState
+    );
+
+    this.surveyMapRoot.set(reduceProof.publicOutput.finalSurveyMapRoot);
+    this.answerMapRoot.set(reduceProof.publicOutput.finalAnswerMapRoot);
+    this.nullifierMapRoot.set(reduceProof.publicOutput.finalNullifierMapRoot);
+    this.lastProcessedActionState.set(reduceProof.publicOutput.actionListState);
   }
 }
