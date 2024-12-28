@@ -8,6 +8,7 @@ import {
   PrivateKey,
   Provable,
   PublicKey,
+  Signature,
 } from "o1js";
 import {
   DispatchData,
@@ -215,17 +216,17 @@ export const reduceActions = async () => {
 
       //  database check
 
-      const databaseSurveyExists = pendingSurveys.find((e) => e.hash === survey.hash())
+      const databaseSurveyExists = pendingSurveys.find((e) => e.hash.equals(survey.hash()))
       if(databaseSurveyExists){
         succeededSurveys.push(databaseSurveyExists)
       }
 
-      const databaseAnswerExists = pendingAnswers.find((e) => e.hash === answer.hash())
+      const databaseAnswerExists = pendingAnswers.find((e) => e.hash.equals(answer.hash()))
       if(databaseAnswerExists){
         succeededAnswers.push(databaseAnswerExists)
       }
 
-      const databaseNullifierExists = pendingNullifiers.find((e) => Field(e) === nullifierMapKey)
+      const databaseNullifierExists = pendingNullifiers.find((e) => Field(e).equals(nullifierMapKey))
       if(databaseNullifierExists){
         succeededNullifiers.push(databaseNullifierExists)
       }
@@ -266,8 +267,14 @@ export const reduceActions = async () => {
     }
     curProof = await ReduceProgram.cutActions(dummyAction, curProof.proof);
   }
+  const serverSignature = Signature.create(serverPrivateKey, [
+    surveyInitialRoot,
+    answerInitialRoot,
+    nullifierInitialMapRoot,
+  ]);
+
   let tx = await Mina.transaction(serverPublicKey, async () => {
-    await zkApp.updateStates(curProof.proof);
+    await zkApp.updateStates(curProof.proof,serverSignature);
   });
   await tx.prove();
   const pendingTx = await tx.sign([serverPrivateKey]).send();
