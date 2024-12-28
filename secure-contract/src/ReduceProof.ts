@@ -11,7 +11,6 @@ import {
 import { ActionData } from './structs/ActionData.js';
 import { Answer, Survey } from './Survey.js';
 
-
 // https://github.com/o1-labs/o1js-bindings/blob/71f2e698dadcdfc62c76a72248c0df71cfd39d4c/lib/binable.ts#L317
 let encoder = new TextEncoder();
 
@@ -47,7 +46,10 @@ function emptyHashWithPrefix(prefix: string) {
 export const actionListAdd = (hash: Field, action: ActionData): Field => {
   return Poseidon.hashWithPrefix('MinaZkappSeqEvents**', [
     hash,
-    Poseidon.hashWithPrefix('MinaZkappEvent******', ActionData.toFields(action)),
+    Poseidon.hashWithPrefix(
+      'MinaZkappEvent******',
+      ActionData.toFields(action)
+    ),
   ]);
 };
 export const merkleActionsAdd = (hash: Field, actionsHash: Field): Field => {
@@ -55,7 +57,6 @@ export const merkleActionsAdd = (hash: Field, actionsHash: Field): Field => {
 };
 
 export const emptyActionListHash = emptyHashWithPrefix('MinaZkappActionsEmpty');
-
 
 export class ReducePublicOutput extends Struct({
   initialSurveyMapRoot: Field,
@@ -69,41 +70,35 @@ export class ReducePublicOutput extends Struct({
   actionListState: Field,
 }) {}
 
-
 class ReducerPublicOutputAndChecks extends Struct({
   publicOutput: ReducePublicOutput,
-  isValid: Bool
+  isValid: Bool,
 }) {}
-
 
 function reduceSurveys(
   input: ActionData,
   prevProof: SelfProof<ActionData, ReducePublicOutput>,
   surveyWitness: MerkleMapWitness,
-  newActionSubListState:Field,
+  newActionSubListState: Field
 ) {
   // Ensure the survey data is valid
-  const validSurveyData = input.content.surveyData.equals(
-    Field(0),
-  ).not();
+  const validSurveyData = input.content.surveyData.equals(Field(0)).not();
   // Verify the witness and update the Merkle tree
   const [rootBefore, key] = surveyWitness.computeRootAndKey(Field(0));
   const surveyCommitment = rootBefore.equals(
-    prevProof.publicOutput.finalSurveyMapRoot,
+    prevProof.publicOutput.finalSurveyMapRoot
   );
-  const validSurveyKey = key.equals(
-    input.content.surveyDbId,
-  );
+  const validSurveyKey = key.equals(input.content.surveyDbId);
   const survey = new Survey({
     data: input.content.surveyData,
     dbId: input.content.surveyDbId,
   });
-  const validChecks = validSurveyData.and(surveyCommitment).and(validSurveyKey)
+  const validChecks = validSurveyData.and(surveyCommitment).and(validSurveyKey);
   const [rootAfter, _] = surveyWitness.computeRootAndKey(survey.hash());
 
   return new ReducerPublicOutputAndChecks({
-    isValid:validChecks,
-    publicOutput:{
+    isValid: validChecks,
+    publicOutput: {
       initialSurveyMapRoot: prevProof.publicOutput.initialSurveyMapRoot,
       initialAnswerMapRoot: prevProof.publicOutput.initialAnswerMapRoot,
       initialNullifierMapRoot: prevProof.publicOutput.initialNullifierMapRoot,
@@ -113,8 +108,7 @@ function reduceSurveys(
       initialActionState: prevProof.publicOutput.initialActionState,
       actionSubListState: newActionSubListState,
       actionListState: prevProof.publicOutput.actionListState,
-  
-    }
+    },
   });
 }
 
@@ -124,22 +118,18 @@ function reduceAnswers(
   surveyWitness: MerkleMapWitness,
   answerWitness: MerkleMapWitness,
   nullifierWitness: MerkleMapWitness,
-  newActionSubListState:Field,
-  nullifierMessage:Field
+  newActionSubListState: Field,
+  nullifierMessage: Field
 ) {
-  const validAnswerData = input.content.answerData.equals(
-    Field(0),
-  ).not();
+  const validAnswerData = input.content.answerData.equals(Field(0)).not();
 
   // Verify the answer Merkle tree witness
   const [rootBefore, key] = answerWitness.computeRootAndKey(Field(0));
   const validAnswerCommitment = rootBefore.equals(
-    prevProof.publicOutput.finalAnswerMapRoot,
+    prevProof.publicOutput.finalAnswerMapRoot
   );
-  
-  const validAnswerkeyCommitment = key.equals(
-    input.content.answerDbId,
-  );
+
+  const validAnswerkeyCommitment = key.equals(input.content.answerDbId);
 
   const survey = new Survey({
     data: input.content.surveyData,
@@ -155,18 +145,20 @@ function reduceAnswers(
     survey.hash()
   );
   const surveyExists = currentSurveyRoot.equals(
-    prevProof.publicOutput.finalSurveyMapRoot,
+    prevProof.publicOutput.finalSurveyMapRoot
   );
   const validSurveyId = currentSurveyKey.equals(survey.dbId);
 
   // Check for duplicate submissions (nullifier check)
 
   const nullifierKey = Poseidon.hash(
-  input.nullifier.getPublicKey().toFields().concat([survey.dbId,nullifierMessage])
-);
+    input.nullifier
+      .getPublicKey()
+      .toFields()
+      .concat([survey.dbId, nullifierMessage])
+  );
 
   input.nullifier.verify([nullifierKey]);
-
 
   input.nullifier.assertUnused(
     nullifierWitness,
@@ -176,14 +168,14 @@ function reduceAnswers(
   const nullifierRootAfter = input.nullifier.setUsed(nullifierWitness);
 
   const validChecks = validAnswerData
-  .and(validAnswerCommitment)
-  .and(validAnswerkeyCommitment)
-  .and(surveyExists)
-  .and(validSurveyId);
+    .and(validAnswerCommitment)
+    .and(validAnswerkeyCommitment)
+    .and(surveyExists)
+    .and(validSurveyId);
 
   const [rootAfter, _] = answerWitness.computeRootAndKey(answer.hash());
   return new ReducerPublicOutputAndChecks({
-    publicOutput:{
+    publicOutput: {
       initialSurveyMapRoot: prevProof.publicOutput.initialSurveyMapRoot,
       initialAnswerMapRoot: prevProof.publicOutput.initialAnswerMapRoot,
       initialNullifierMapRoot: prevProof.publicOutput.initialNullifierMapRoot,
@@ -194,10 +186,9 @@ function reduceAnswers(
       actionSubListState: newActionSubListState,
       actionListState: prevProof.publicOutput.actionListState,
     },
-    isValid:validChecks
+    isValid: validChecks,
   });
 }
-
 
 export async function init(
   surveyMapRoot: Field,
@@ -234,11 +225,11 @@ export async function update(
     prevProof.publicOutput.actionSubListState,
     input
   );
-  
+
   const newPublicOutput = Provable.if(
     input.isSurvey,
     ReducerPublicOutputAndChecks,
-    reduceSurveys(input, prevProof, surveyWitness,newActionSubListState),
+    reduceSurveys(input, prevProof, surveyWitness, newActionSubListState),
     reduceAnswers(
       input,
       prevProof,
@@ -249,7 +240,7 @@ export async function update(
       nullifierMessage
     )
   );
-  newPublicOutput.isValid.assertEquals(true)
+  newPublicOutput.isValid.assertEquals(true);
   return {
     publicOutput: newPublicOutput.publicOutput,
   };
@@ -305,7 +296,7 @@ export const ReduceProgram = ZkProgram({
         MerkleMapWitness,
         MerkleMapWitness,
         MerkleMapWitness,
-        Field
+        Field,
       ],
       async method(
         input: ActionData,
