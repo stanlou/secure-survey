@@ -50,7 +50,7 @@ The **actionType** defines the structure of dispatched actions:
 ## Methods  
 
 ### `saveSurvey(survey: Survey, nullifier: Nullifier)`  
-**Public Inputs**:  
+**Private Inputs**:  
 - `survey`: A struct containing the survey data (ID, content).  
 - `nullifier`: A dummy nullifier used solely to satisfy the actionType.  
 
@@ -66,7 +66,7 @@ The **actionType** defines the structure of dispatched actions:
 ---
 
 ### `saveAnswer(answer: Answer, nullifier: Nullifier)`  
-**Public Inputs**:  
+**Private Inputs**:  
 - `answer`: A struct containing the answer data (ID, survey reference, content).  
 - `nullifier`: Ensures uniqueness for this action.  
 
