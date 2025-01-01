@@ -2,11 +2,9 @@ import { defineStore } from "pinia";
 import ZkappWorkerClient from "../zkappWorkerClient";
 import axios from "axios";
 import { API_URL } from "../webService/apiService";
-import { Field, Nullifier, Poseidon, PublicKey } from "o1js";
-import { createAnswerStruct } from "secure-survey";
+import {  Nullifier } from "o1js";
 import { createNullifier } from "../helper/nullifier";
 import { AnswerType, SurveyType } from "../types";
-import { colProps } from "element-plus";
 
 interface MinaWallet {
   requestAccounts: () => Promise<string[]>;
@@ -20,7 +18,7 @@ declare global {
     mina?: MinaWallet;
   }
 }
-const ZKAPP_ADDRESS = "B62qiveKmu2zbw9FgkWu7e7VbunErWUByCFZJCvzFCvWepJMSD8uCMP";
+const ZKAPP_ADDRESS = "B62qmtdqF1HtEPGhNJZ5rq2PSuBNVhpE8uxXEqUeXzrgmXimgPVM26S";
 const TRANSACTION_FEE = 0.1;
 
 export const useZkAppStore = defineStore("useZkAppModule", {
@@ -35,7 +33,8 @@ export const useZkAppStore = defineStore("useZkAppModule", {
     error: null as Object | any,
     loading: false,
     currentTransactionLink: "",
-    zkAppStates : null as null | any
+    zkAppStates : null as null | any,
+    compiled: false
   }),
   getters: {},
   actions: {
@@ -46,13 +45,12 @@ export const useZkAppStore = defineStore("useZkAppModule", {
           this.stepDisplay = "Loading web worker...";
           this.zkappWorkerClient = new ZkappWorkerClient();
           await new Promise((resolve) => setTimeout(resolve, 5000));
-          this.stepDisplay = "Done loading web worker";
+          this.stepDisplay = "Setting Mina instance...";
           await this.zkappWorkerClient.setActiveInstanceToDevnet();
 
           const accounts = await window.mina.requestAccounts();
 
           this.publicKeyBase58 = accounts[0];
-          this.stepDisplay = `Using key: ${this.publicKeyBase58}`;
           this.stepDisplay = "Checking if fee payer account exists...";
           const res = await this.zkappWorkerClient.fetchAccount(
             this.publicKeyBase58
@@ -63,19 +61,18 @@ export const useZkAppStore = defineStore("useZkAppModule", {
 
           this.stepDisplay = "Compiling zkApp...";
           await this.zkappWorkerClient.compileContract();
-          this.stepDisplay = "zkApp compiled";
-          
+          this.stepDisplay = "";
+          this.compiled = true
           this.zkAppStates = await this.zkappWorkerClient.initZkappInstance(ZKAPP_ADDRESS);
           this.hasBeenSetup = true;
           this.hasWallet = true;
-          this.stepDisplay = "";
-          await this.zkappWorkerClient.loadOffChainStorage();
-          console.log("loaded offchainstorage....");
         } catch (error: any) {
           return { message: error.message };
         }
       } else {
         this.hasWallet = false;
+        this.stepDisplay = "Mina Wallet not detected";
+
         this.error = {
           message: "Mina Wallet not detected. Please install Auro Wallet.",
         };
@@ -85,7 +82,6 @@ export const useZkAppStore = defineStore("useZkAppModule", {
     async checkAccountExists() {
       try {
         for (;;) {
-          this.stepDisplay = "Checking if fee payer account exists...";
           const res = await this.zkappWorkerClient!.fetchAccount(
             this.publicKeyBase58
           );
@@ -133,9 +129,9 @@ export const useZkAppStore = defineStore("useZkAppModule", {
             memo: "",
           },
         });
-        const transactionLink = `https://minascan.io/devnet/tx/${hash}`;
+        const transactionLink = `https://minascan.io/devnet/tx/${hash}?type=zk-tx`;
         this.currentTransactionLink = transactionLink;
-        this.stepDisplay = transactionLink;
+        this.stepDisplay = "";
       } catch (err) {
         console.log("error ", err);
       } finally {
@@ -154,7 +150,13 @@ export const useZkAppStore = defineStore("useZkAppModule", {
         const jsonNullifier = await (window as any).mina.createNullifier({
           message: [nullifierKey]
         })
-        await axios.post(API_URL+"/nullifier/save",{key:Nullifier.fromJSON(jsonNullifier).key()});
+        try {
+          await axios.post(API_URL+"/nullifier/save",{key:Nullifier.fromJSON(jsonNullifier).key()});
+
+        }catch(err:any) {
+          this.stepDisplay = "";
+          throw err.response.data.message
+        }
 
         this.stepDisplay = "Creating a transaction...";
 
@@ -173,11 +175,13 @@ export const useZkAppStore = defineStore("useZkAppModule", {
             memo: "",
           },
         });
-        const transactionLink = `https://minascan.io/devnet/tx/${hash}`;
+        const transactionLink = `https://minascan.io/devnet/tx/${hash}?type=zk-tx`;
         this.currentTransactionLink = transactionLink;
-        this.stepDisplay = transactionLink;
-      } catch (err) {
+        this.stepDisplay = "";
+      } catch (err:any) {
         console.log("error ", err);
+        throw err
+
       } finally {
         this.loading = false;
       }

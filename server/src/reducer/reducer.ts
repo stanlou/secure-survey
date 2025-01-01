@@ -51,7 +51,7 @@ export const reduceActions = async () => {
   const serverPublicKey = serverPrivateKey.toPublicKey();
 
   const zkAppPublicKeyBase58 =
-    "B62qiveKmu2zbw9FgkWu7e7VbunErWUByCFZJCvzFCvWepJMSD8uCMP";
+    "B62qmtdqF1HtEPGhNJZ5rq2PSuBNVhpE8uxXEqUeXzrgmXimgPVM26S";
   const zkAppPublicKey = PublicKey.fromBase58(zkAppPublicKeyBase58);
 
   // ----------------------------------------------------

@@ -123,11 +123,6 @@ const functions = {
     return state.transaction!.toJSON();
   },
 
-  loadOffChainStorage: async (args: {}) => {
-    let offChainStorage = new OffChainStorage();
-    offChainStorage.loadOffChainState();
-    state.offChainStorage = offChainStorage;
-  },
   createSurveyTransaction: async (args: { survey: SurveyType,jsonNullifier:NullifierJson }) => {
     const surveyStruct = createSurveyStruct(
       args.survey.id,
