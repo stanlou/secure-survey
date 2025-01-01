@@ -28,6 +28,7 @@ app.use("/answer", answerRoute);
 app.use("/nullifier", nullifierRoute);
 // offChainStorage managemenet
 app.use("/offchain", offchainRoute);
+// for testing purpose , normally we use the cron
 app.use("/reduce", reduceRoute);
 
 app.listen(port, () => {

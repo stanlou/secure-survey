@@ -69,8 +69,6 @@ export const useZkAppStore = defineStore("useZkAppModule", {
           this.hasBeenSetup = true;
           this.hasWallet = true;
           this.stepDisplay = "";
-          await this.zkappWorkerClient.loadOffChainStorage();
-          console.log("loaded offchainstorage....");
         } catch (error: any) {
           return { message: error.message };
         }

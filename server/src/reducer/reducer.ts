@@ -38,9 +38,11 @@ type AnswerList = {
  
 export const reduceActions = async () => {
 
-  const Network = Mina.Network(
-    "https://api.minascan.io/node/devnet/v1/graphql"
-  );
+  const Network = Mina.Network({
+    mina: 'https://api.minascan.io/node/devnet/v1/graphql',
+    archive: 'https://api.minascan.io/archive/devnet/v1/graphql',
+  });
+
   Mina.setActiveInstance(Network);
   const transactionFee = 100_000_000;
 

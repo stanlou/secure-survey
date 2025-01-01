@@ -32,50 +32,9 @@ const state = {
   zkappInstance: null as null | SurveyContract,
   transaction: null as null | Transaction,
   verificationKey: null as null | VerificationKeyData | any,
-  offChainStorage: null as null | OffChainStorage,
 };
 
-class OffChainStorage {
-  surveyMerkleMap: MerkleMap;
-  surveyCount: number;
-  answerMerkleMap!: MerkleMap;
-  answerCount!: number;
-  nullifierMerkleMap!: MerkleMap;
-  constructor() {
-    this.surveyMerkleMap = new MerkleMap();
-    this.surveyCount = 0;
-    this.answerCount = 0;
-    this.answerMerkleMap = new MerkleMap();
-    this.nullifierMerkleMap = new MerkleMap();
-  }
 
-  async loadOffChainState() {
-    const { data } = await axios.get(API_Base_URL + "/offchain/getAll");
-    const surveyList = data.surveyList;
-    const answerList = data.answerList;
-    const nullifierList = data.nullifierList;
-
-    this.surveyCount = surveyList?.length;
-    surveyList.map((e:SurveyType) => {
-      const id = e.id;
-      const data = JSON.stringify(e.data);
-      const survey = createSurveyStruct(id, data);
-      this.surveyMerkleMap.set(survey.dbId, survey.hash());
-    });
-    this.answerCount = answerList?.length;
-    answerList.map((answerJson: AnswerType) => {
-      const id = answerJson.id;
-      const data = JSON.stringify(answerJson.data);
-      const survey = createSurveyStruct(answerJson.survey.id, JSON.stringify(answerJson.survey.data));
-
-      const answer = createAnswerStruct(id, data, survey);
-      this.answerMerkleMap.set(answer.dbId, answer.hash());
-    });
-    nullifierList.map((e: NullifierType) => {
-      this.nullifierMerkleMap.set(Field(e.key), Field(1));
-    });
-  }
-}
 const functions = {
   setActiveInstanceToDevnet: async () => {
     const Network = Mina.Network(
@@ -123,11 +82,6 @@ const functions = {
     return state.transaction!.toJSON();
   },
 
-  loadOffChainStorage: async (args: {}) => {
-    let offChainStorage = new OffChainStorage();
-    offChainStorage.loadOffChainState();
-    state.offChainStorage = offChainStorage;
-  },
   createSurveyTransaction: async (args: { survey: SurveyType,jsonNullifier:NullifierJson }) => {
     const surveyStruct = createSurveyStruct(
       args.survey.id,
