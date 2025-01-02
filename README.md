@@ -127,3 +127,64 @@ This method verifies and processes the reducer's actions and updates the contrac
 
 This survey app demonstrates the integration of blockchain with traditional database systems to ensure the credibility and integrity of survey data. By using Mina Protocol, the app provides a robust verification layer, while nullifiers and Merkle trees prevent data tampering and duplicate submissions.  
 
+---
+
+## Prerequisites
+
+Before running the project, ensure you have the following installed on your system:
+
+- [Node.js](https://nodejs.org/) 
+- [Yarn](https://yarnpkg.com/)  
+- [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/)
+
+
+## Setup Instructions
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/stanlou/secure-survey.git
+cd secure-survey
+```
+
+### 2. Start the PostgreSQL database
+
+```bash
+docker-compose up -d
+```
+
+### 3. Link the secure-survey package
+
+Navigate to the secure-contract directory and link it globally:
+
+```bash
+npm link
+yarn link
+```
+Link secure-survey to the backend:
+
+```bash
+cd server
+npm link secure-survey
+```
+Link secure-survey to the frontend:
+
+```bash
+cd client-ui
+yarn link secure-survey
+```
+### 4. Set up the backend
+
+```bash
+cd server
+npm install
+npm run dev
+```
+
+### 5. Set up the frontend
+
+```bash
+cd client
+yarn install
+npm run dev
+```
