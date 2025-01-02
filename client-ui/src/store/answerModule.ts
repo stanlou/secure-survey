@@ -20,6 +20,8 @@ export const useAnswerStore = defineStore('answerModule', {
             await createAnswer(data.createAnswer)
         } catch(err) {
             this.error = err
+        }finally {
+          this.error = null
         }
       },
       async getAnswerById(id:string) {

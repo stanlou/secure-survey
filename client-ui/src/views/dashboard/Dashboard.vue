@@ -31,7 +31,8 @@ onMounted(async () => {
   try {
     const { data } = await axios.get(`${API_Base_URL}/survey/findOne/answers/${id}`);
     const survey = new Model(data.survey.data);
-    const surveyResults = data.survey.answers
+    const surveyResults = data.survey.answers.map((e:any) => e.data)
+    console.log(surveyResults,survey)
     const vizPanel = new VisualizationPanel(
       survey.getAllQuestions(),
       surveyResults,

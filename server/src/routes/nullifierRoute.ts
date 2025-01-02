@@ -8,7 +8,7 @@ router.post("/save", async (req: Request, res: Response)  => {
     const nullifierJson = req.body; 
     const existingNullifier = await prisma.nullifier.findUnique({
       where:{
-        key:nullifierJson
+        key:nullifierJson.key
       }
     })
     if(!existingNullifier){
