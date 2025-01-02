@@ -36,6 +36,7 @@
     "mina-signer": "^3.0.7",
     "node-cron": "^3.0.3",
     "o1js": "2.2.0",
+    "secure-survey": "^0.1.0",
     "survey-core": "^1.12.10"
   }
 }

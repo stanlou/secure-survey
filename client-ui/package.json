@@ -18,6 +18,7 @@
     "o1js": "2.2.0",
     "path": "^0.12.7",
     "pinia": "^2.2.6",
+    "secure-survey": "^0.1.0",
     "survey-analytics": "^1.12.13",
     "survey-core": "^1.12.10",
     "survey-creator-core": "^1.12.10",

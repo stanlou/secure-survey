@@ -38,9 +38,10 @@ type AnswerList = {
  
 export const reduceActions = async () => {
 
-  const Network = Mina.Network(
-    "https://api.minascan.io/node/devnet/v1/graphql"
-  );
+  const Network = Mina.Network({
+    mina: 'https://api.minascan.io/node/devnet/v1/graphql',
+    archive: 'https://api.minascan.io/archive/devnet/v1/graphql',
+  });
   Mina.setActiveInstance(Network);
   const transactionFee = 100_000_000;
 
@@ -51,7 +52,7 @@ export const reduceActions = async () => {
   const serverPublicKey = serverPrivateKey.toPublicKey();
 
   const zkAppPublicKeyBase58 =
-    "B62qmtdqF1HtEPGhNJZ5rq2PSuBNVhpE8uxXEqUeXzrgmXimgPVM26S";
+    "B62qrTgHX1jTxqxCRqVRcLffZDngbrhrcqgH6sn7pvHLwpPFBYyRrk7";
   const zkAppPublicKey = PublicKey.fromBase58(zkAppPublicKeyBase58);
 
   // ----------------------------------------------------

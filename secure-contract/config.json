@@ -54,6 +54,15 @@
       "feepayerAlias": "secure-survey-ch1",
       "fee": "0.1",
       "smartContract": "SurveyContract"
+    },
+    "secure-contract-ch3-devnet": {
+      "networkId": "testnet",
+      "url": "https://api.minascan.io/node/devnet/v1/graphql",
+      "keyPath": "keys/secure-contract-ch3-devnet.json",
+      "feepayerKeyPath": "C:\\Users\\louki/.cache/zkapp-cli/keys/secure-survey-ch1.json",
+      "feepayerAlias": "secure-survey-ch1",
+      "fee": "0.1",
+      "smartContract": "SurveyContract"
     }
   }
 }

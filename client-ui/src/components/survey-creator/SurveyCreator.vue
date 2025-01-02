@@ -4,8 +4,8 @@
       <Navbar />
     </div>
     <SurveyCreatorComponent :model="creator" />
-    <div @click="handleSaveSurvey" class="d-flex justify-content-end">
-      <el-button class="create-btn" type="success" size="large" :disabled="loading" element-loading-background="unset"
+    <div class="d-flex justify-content-end">
+      <el-button class="create-btn" type="success" @click="handleSaveSurvey" size="large" :disabled="loading" element-loading-background="unset"
         v-loading="loading">{{ createButtonText }}</el-button>
     </div>
   </div>

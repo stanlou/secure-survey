@@ -153,27 +153,7 @@ cd secure-survey
 docker-compose up -d
 ```
 
-### 3. Link the secure-survey package
-
-Navigate to the secure-contract directory and link it globally:
-
-```bash
-npm link
-yarn link
-```
-Link secure-survey to the backend:
-
-```bash
-cd server
-npm link secure-survey
-```
-Link secure-survey to the frontend:
-
-```bash
-cd client-ui
-yarn link secure-survey
-```
-### 4. Set up the backend
+### 3. Set up the backend
 
 ```bash
 cd server
@@ -181,7 +161,7 @@ npm install
 npm run dev
 ```
 
-### 5. Set up the frontend
+### 4. Set up the frontend
 
 ```bash
 cd client
